@@ -1,0 +1,1085 @@
+openapi: 3.0.3
+info:
+  title: ERP Aluminium - Aluminum Business Module API
+  description: |
+    API for managing aluminum profiles, quotes, orders, production, deliveries, and invoices.
+    Part of the ERP Aluminium platform.
+  version: 1.0.0
+  contact:
+    name: ERP Aluminium Team
+
+servers:
+  - url: http://localhost:3000/api
+    description: Local development server
+  - url: https://api.erp-aluminium.com/api
+    description: Production server
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Profiles
+    description: Aluminum profile catalog management
+  - name: Quotes
+    description: Quote creation and workflow management
+  - name: Orders
+    description: Customer order management
+  - name: Production
+    description: Production order tracking
+  - name: Deliveries
+    description: Delivery note management
+  - name: Invoices
+    description: Invoice generation and tracking
+  - name: Customers
+    description: Customer management
+
+paths:
+  # Profiles
+  /profiles:
+    get:
+      summary: List aluminum profiles
+      tags: [Profiles]
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [PLAT, TUBE, CORNIERE, UPN, IPE, CUSTOM]
+        - name: isActive
+          in: query
+          schema:
+            type: boolean
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search in reference and name
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: List of profiles
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AluminumProfile'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+    post:
+      summary: Create new profile
+      tags: [Profiles]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AluminumProfileInput'
+      responses:
+        '201':
+          description: Profile created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AluminumProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /profiles/{id}:
+    get:
+      summary: Get profile by ID
+      tags: [Profiles]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Profile details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AluminumProfile'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      summary: Update profile
+      tags: [Profiles]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AluminumProfileInput'
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AluminumProfile'
+
+    delete:
+      summary: Deactivate profile (soft delete)
+      tags: [Profiles]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Profile deactivated
+
+  /profiles/{id}/calculate:
+    post:
+      summary: Calculate weight and surface for given dimensions
+      tags: [Profiles]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                length:
+                  type: number
+                  description: Length in mm
+                quantity:
+                  type: integer
+                  default: 1
+      responses:
+        '200':
+          description: Calculation results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  weight:
+                    type: number
+                    description: Total weight in kg
+                  surface:
+                    type: number
+                    description: Total surface in m²
+                  materialCost:
+                    type: number
+                    description: Material cost in EUR
+
+  # Quotes
+  /quotes:
+    get:
+      summary: List quotes
+      tags: [Quotes]
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [BROUILLON, ENVOYÉ, ACCEPTÉ, REFUSÉ, EXPIRÉ, ANNULÉ, ARCHIVÉ]
+        - name: customerId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: commercialId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: fromDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: toDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: List of quotes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Quote'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+    post:
+      summary: Create new quote
+      tags: [Quotes]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteInput'
+      responses:
+        '201':
+          description: Quote created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Quote'
+
+  /quotes/{id}:
+    get:
+      summary: Get quote with lines
+      tags: [Quotes]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Quote details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuoteDetail'
+
+    put:
+      summary: Update quote (only in BROUILLON status)
+      tags: [Quotes]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteInput'
+      responses:
+        '200':
+          description: Quote updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Quote'
+
+    delete:
+      summary: Delete quote (only BROUILLON)
+      tags: [Quotes]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Quote deleted
+
+  /quotes/{id}/lines:
+    post:
+      summary: Add line to quote
+      tags: [Quotes]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteLineInput'
+      responses:
+        '201':
+          description: Line added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuoteLine'
+
+  /quotes/{id}/lines/{lineId}:
+    put:
+      summary: Update quote line
+      tags: [Quotes]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: lineId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteLineInput'
+      responses:
+        '200':
+          description: Line updated
+
+    delete:
+      summary: Remove line from quote
+      tags: [Quotes]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: lineId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Line removed
+
+  /quotes/{id}/send:
+    post:
+      summary: Send quote to customer (BROUILLON → ENVOYÉ)
+      tags: [Quotes]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Quote sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StateTransitionResponse'
+
+  /quotes/{id}/accept:
+    post:
+      summary: Mark quote as accepted (ENVOYÉ → ACCEPTÉ)
+      tags: [Quotes]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Quote accepted
+
+  /quotes/{id}/refuse:
+    post:
+      summary: Mark quote as refused (ENVOYÉ → REFUSÉ)
+      tags: [Quotes]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Quote refused
+
+  /quotes/{id}/convert:
+    post:
+      summary: Convert quote to order (ACCEPTÉ → COMMANDE)
+      tags: [Quotes]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '201':
+          description: Order created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerOrder'
+
+  /quotes/{id}/pdf:
+    get:
+      summary: Generate quote PDF
+      tags: [Quotes]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: PDF file
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+
+  # Orders
+  /orders:
+    get:
+      summary: List customer orders
+      tags: [Orders]
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [EN_ATTENTE, CONFIRMÉE, EN_PRODUCTION, PARTIELLE, TERMINÉE, LIVRÉE, FACTURÉE, ANNULÉE]
+        - name: customerId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CustomerOrder'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+    post:
+      summary: Create order (typically from quote)
+      tags: [Orders]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerOrderInput'
+      responses:
+        '201':
+          description: Order created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerOrder'
+
+  /orders/{id}:
+    get:
+      summary: Get order details
+      tags: [Orders]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Order details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerOrderDetail'
+
+  /orders/{id}/confirm:
+    post:
+      summary: Confirm order (EN_ATTENTE → CONFIRMÉE)
+      tags: [Orders]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Order confirmed
+
+  /orders/{id}/start-production:
+    post:
+      summary: Start production (CONFIRMÉE → EN_PRODUCTION)
+      tags: [Orders]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                plannedStart:
+                  type: string
+                  format: date-time
+                plannedEnd:
+                  type: string
+                  format: date-time
+      responses:
+        '201':
+          description: Production order created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductionOrder'
+
+  # Customers
+  /customers:
+    get:
+      summary: List customers
+      tags: [Customers]
+      parameters:
+        - name: isActive
+          in: query
+          schema:
+            type: boolean
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: List of customers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Customer'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+    post:
+      summary: Create customer
+      tags: [Customers]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerInput'
+      responses:
+        '201':
+          description: Customer created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+
+  /customers/{id}:
+    get:
+      summary: Get customer
+      tags: [Customers]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Customer details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+
+    put:
+      summary: Update customer
+      tags: [Customers]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerInput'
+      responses:
+        '200':
+          description: Customer updated
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    AluminumProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        reference:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [PLAT, TUBE, CORNIERE, UPN, IPE, CUSTOM]
+        length:
+          type: number
+        width:
+          type: number
+        thickness:
+          type: number
+        unitPrice:
+          type: number
+        weightPerMeter:
+          type: number
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    AluminumProfileInput:
+      type: object
+      required: [reference, name, type, unitPrice]
+      properties:
+        reference:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [PLAT, TUBE, CORNIERE, UPN, IPE, CUSTOM]
+        length:
+          type: number
+        width:
+          type: number
+        thickness:
+          type: number
+        unitPrice:
+          type: number
+
+    Quote:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        quoteNumber:
+          type: string
+        customerId:
+          type: string
+          format: uuid
+        customer:
+          $ref: '#/components/schemas/Customer'
+        commercialId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [BROUILLON, ENVOYÉ, ACCEPTÉ, REFUSÉ, EXPIRÉ, ANNULÉ, ARCHIVÉ]
+        subtotal:
+          type: number
+        total:
+          type: number
+        validUntil:
+          type: string
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+
+    QuoteDetail:
+      allOf:
+        - $ref: '#/components/schemas/Quote'
+        - type: object
+          properties:
+            lines:
+              type: array
+              items:
+                $ref: '#/components/schemas/QuoteLine'
+            discountPercent:
+              type: number
+            discountAmount:
+              type: number
+            vatRate:
+              type: number
+            vatAmount:
+              type: number
+            notes:
+              type: string
+
+    QuoteInput:
+      type: object
+      required: [customerId]
+      properties:
+        customerId:
+          type: string
+          format: uuid
+        validUntil:
+          type: string
+          format: date
+        discountPercent:
+          type: number
+        vatRate:
+          type: number
+          default: 20
+        notes:
+          type: string
+        customerNotes:
+          type: string
+
+    QuoteLine:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        profileId:
+          type: string
+          format: uuid
+        profile:
+          $ref: '#/components/schemas/AluminumProfile'
+        quantity:
+          type: integer
+        unitLength:
+          type: number
+        unitWeight:
+          type: number
+        totalWeight:
+          type: number
+        unitPrice:
+          type: number
+        lineTotal:
+          type: number
+        description:
+          type: string
+
+    QuoteLineInput:
+      type: object
+      required: [profileId, quantity, unitLength, unitPrice]
+      properties:
+        profileId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+        unitLength:
+          type: number
+        unitPrice:
+          type: number
+        lineDiscount:
+          type: number
+        description:
+          type: string
+
+    CustomerOrder:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        orderNumber:
+          type: string
+        quoteId:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [EN_ATTENTE, CONFIRMÉE, EN_PRODUCTION, PARTIELLE, TERMINÉE, LIVRÉE, FACTURÉE, ANNULÉE]
+        total:
+          type: number
+        deliveryDate:
+          type: string
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+
+    CustomerOrderDetail:
+      allOf:
+        - $ref: '#/components/schemas/CustomerOrder'
+        - type: object
+          properties:
+            quote:
+              $ref: '#/components/schemas/Quote'
+            productionOrders:
+              type: array
+              items:
+                $ref: '#/components/schemas/ProductionOrder'
+
+    CustomerOrderInput:
+      type: object
+      required: [customerId]
+      properties:
+        quoteId:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        deliveryDate:
+          type: string
+          format: date
+        notes:
+          type: string
+
+    ProductionOrder:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        productionNumber:
+          type: string
+        customerOrderId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [PLANIFIÉ, EN_COURS, EN_PAUSE, TERMINÉ, ANNULÉ]
+        priority:
+          type: string
+          enum: [BASSE, NORMALE, HAUTE, URGENTE]
+        plannedStart:
+          type: string
+          format: date-time
+        plannedEnd:
+          type: string
+          format: date-time
+        actualStart:
+          type: string
+          format: date-time
+        actualEnd:
+          type: string
+          format: date-time
+
+    Customer:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        companyName:
+          type: string
+        contactName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        billingCity:
+          type: string
+        billingCountry:
+          type: string
+        isActive:
+          type: boolean
+
+    CustomerInput:
+      type: object
+      required: [code, companyName]
+      properties:
+        code:
+          type: string
+        companyName:
+          type: string
+        contactName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        billingStreet:
+          type: string
+        billingCity:
+          type: string
+        billingPostalCode:
+          type: string
+        billingCountry:
+          type: string
+        paymentTerms:
+          type: string
+        vatNumber:
+          type: string
+
+    StateTransitionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        previousState:
+          type: string
+        currentState:
+          type: string
+        transitionedAt:
+          type: string
+          format: date-time
+        transitionedBy:
+          type: string
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+
+  responses:
+    BadRequest:
+      description: Invalid input
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              details:
+                type: array
+                items:
+                  type: string
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+
+    Conflict:
+      description: Resource conflict (e.g., duplicate reference)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

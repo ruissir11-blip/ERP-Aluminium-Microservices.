@@ -1,0 +1,208 @@
+version: '3.8'
+
+# ============================================================
+#  ERP Aluminium — Docker Compose (Microservices)
+#  Services: Nginx, Backend, AI Service, Postgres, Redis, Loki
+# ============================================================
+
+services:
+
+  # ──────────────────────────────────────────────────────────
+  #  NGINX — Reverse Proxy (Single Entry Point)
+  #  Routes:  :80/api/  → backend:3000
+  #           :80/ai/   → ai-service:8000
+  # ──────────────────────────────────────────────────────────
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: erp-nginx
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+      ai-service:
+        condition: service_healthy
+    networks:
+      - erp-network
+    restart: unless-stopped
+
+  # ──────────────────────────────────────────────────────────
+  #  BACKEND — Node.js API (Express + TypeScript)
+  # ──────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: erp-backend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./src:/app/src
+      - /app/node_modules
+    env_file:
+      - .env.docker
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=postgres
+      - REDIS_HOST=redis
+      - AI_SERVICE_URL=http://ai-service:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - erp-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ──────────────────────────────────────────────────────────
+  #  AI SERVICE — FastAPI (Python 3.10 + Prophet + Statsmodels)
+  # ──────────────────────────────────────────────────────────
+  ai-service:
+    build:
+      context: ./python-ai
+      dockerfile: Dockerfile
+    container_name: erp-ai-service
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env.ai
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/erp_aluminium
+      - REDIS_URL=redis://redis:6379/1
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./python-ai:/app
+      - ai-models:/app/models
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - erp-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ──────────────────────────────────────────────────────────
+  #  POSTGRES — TimescaleDB (Data Layer)
+  # ──────────────────────────────────────────────────────────
+  postgres:
+    image: timescale/timescaledb:latest-pg15
+    container_name: erp-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: erp_aluminium
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    command: postgres -c shared_preload_libraries=timescaledb
+    networks:
+      - erp-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d erp_aluminium"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ──────────────────────────────────────────────────────────
+  #  REDIS — Cache / Sessions / AI Job Queue
+  # ──────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: erp-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - erp-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ──────────────────────────────────────────────────────────
+  #  LOKI — Log Aggregation
+  # ──────────────────────────────────────────────────────────
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: erp-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./deploy/monitoring/loki.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    networks:
+      - erp-network
+    restart: unless-stopped
+    command: -config.file=/etc/loki/local-config.yaml
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3100/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ──────────────────────────────────────────────────────────
+  #  PGADMIN — Database Management UI
+  # ──────────────────────────────────────────────────────────
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: erp-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@erp.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - erp-network
+    restart: unless-stopped
+
+# ────────────────────────────────────────────────────────────
+#  NETWORK — Shared bridge for all services
+# ────────────────────────────────────────────────────────────
+networks:
+  erp-network:
+    driver: bridge
+
+# ────────────────────────────────────────────────────────────
+#  VOLUMES — Persistent storage
+# ────────────────────────────────────────────────────────────
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  loki_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+  ai-models:
+    driver: local

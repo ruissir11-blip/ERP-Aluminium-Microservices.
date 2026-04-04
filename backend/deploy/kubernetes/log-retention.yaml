@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loki-retention
+  namespace: monitoring
+data:
+  retention.yaml: |
+    # Log retention configuration
+    # Retention: 30 days for application logs
+    # 7 days for debug logs
+    
+    limits:
+      retention_days: 30
+      max_age: 720h
+    
+    # Per-tenant retention (optional)
+    # defaults to the global retention above
+    
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: loki-cleanup
+  namespace: monitoring
+spec:
+  schedule: "0 4 * * *"  # Daily at 4 AM
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: cleanup
+            image: grafana/loki:2.9.0
+            command:
+            - /bin/sh
+            - -c
+            - |
+              # Delete old log chunks (older than 30 days)
+              find /loki/chunks -type f -mtime +30 -delete
+              
+              # Delete old index files (older than 30 days)
+              find /loki/index -type f -mtime +30 -delete
+              
+              echo "Cleanup completed at $(date)"
+            volumeMounts:
+            - name: loki-data
+              mountPath: /loki
+          volumes:
+          - name: loki-data
+            persistentVolumeClaim:
+              claimName: loki-pvc
+          restartPolicy: OnFailure

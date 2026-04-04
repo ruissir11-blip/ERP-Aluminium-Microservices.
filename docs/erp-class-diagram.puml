@@ -1,0 +1,976 @@
+@startuml Diagramme de Classe — ERP Aluminium
+
+' ============================================================
+'  CONFIGURATION & STYLE
+' ============================================================
+skinparam linetype ortho
+skinparam shadowing false
+skinparam defaultFontName    Arial
+skinparam defaultFontSize    11
+skinparam classAttributeIconSize 0
+
+skinparam class {
+    BackgroundColor     #FAFAFA
+    BorderColor         #37474F
+    HeaderBackgroundColor #E3F2FD
+    FontColor           #212121
+    ArrowColor          #546E7A
+    StereotypeFontSize  10
+}
+
+skinparam enum {
+    BackgroundColor     #FFF3E0
+    BorderColor         #E65100
+    HeaderBackgroundColor #FFE0B2
+}
+
+skinparam package {
+    BackgroundColor     #F5F5F5
+    BorderColor         #90A4AE
+    FontColor           #37474F
+    FontSize            14
+    FontStyle           bold
+}
+
+
+' ************************************************************
+'  MODULE : AUTHENTIFICATION & SÉCURITÉ
+' ************************************************************
+package "Authentification & Sécurité" <<Frame>> {
+
+    class Utilisateur {
+        - id : UUID
+        - email : String
+        - motDePasseHash : String
+        - nom : String
+        - prenom : String
+        - estActif : Boolean
+        - mfaActive : Boolean
+        - mfaSecret : String
+        - dateCreation : DateTime
+        - dateMiseAJour : DateTime
+        --
+        + authentifier() : Token
+        + activerMFA() : void
+        + reinitialiserMotDePasse() : void
+    }
+
+    class Role {
+        - id : UUID
+        - nom : String
+        - description : String
+        --
+        + attribuerPermission() : void
+        + retirerPermission() : void
+    }
+
+    class Permission {
+        - id : UUID
+        - module : String
+        - action : ActionType
+        --
+        + verifier() : Boolean
+    }
+
+    class JournalAudit {
+        - id : UUID
+        - action : String
+        - details : JSON
+        - adresseIP : String
+        - horodatage : DateTime
+        --
+        + enregistrer() : void
+        + consulter() : List
+    }
+
+    enum ActionType {
+        CREER
+        LIRE
+        MODIFIER
+        SUPPRIMER
+    }
+}
+
+
+' ************************************************************
+'  MODULE A : MÉTIER ALUMINIUM
+' ************************************************************
+package "Métier Aluminium" <<Frame>> {
+
+    class ProfilAluminium {
+        - id : UUID
+        - reference : String
+        - nom : String
+        - type : TypeProfil
+        - longueur : Decimal
+        - largeur : Decimal
+        - epaisseur : Decimal
+        - caracteristiquesTechniques : Text
+        - prixUnitaire : Decimal
+        - poidsParMetre : Decimal
+        - densite : Decimal
+        - estActif : Boolean
+        - dateCreation : DateTime
+        --
+        + calculerSurface() : Decimal
+        + calculerPoids() : Decimal
+        + calculerCoutMatiere() : Decimal
+    }
+
+    class Client {
+        - id : UUID
+        - nom : String
+        - adresse : String
+        - telephone : String
+        - email : String
+        - dateCreation : DateTime
+        --
+        + creer() : void
+        + modifier() : void
+        + consulter() : Client
+    }
+
+    class Devis {
+        - id : UUID
+        - numeroDevis : String
+        - statut : StatutDevis
+        - sousTotal : Decimal
+        - remisePourcent : Decimal
+        - montantRemise : Decimal
+        - montantTVA : Decimal
+        - total : Decimal
+        - dateValidite : Date
+        - notes : Text
+        - dateCreation : DateTime
+        - dateMiseAJour : DateTime
+        --
+        + creer() : void
+        + modifier() : void
+        + genererPDF() : File
+        + envoyerParEmail() : void
+        + convertirEnCommande() : Commande
+    }
+
+    class LigneDevis {
+        - id : UUID
+        - quantite : Integer
+        - longueurUnitaire : Decimal
+        - surfaceM2 : Decimal
+        - poidsKg : Decimal
+        - prixUnitaire : Decimal
+        - prixTotal : Decimal
+        --
+        + calculerSurface() : Decimal
+        + calculerPoids() : Decimal
+        + calculerPrix() : Decimal
+    }
+
+    class Commande {
+        - id : UUID
+        - numeroCommande : String
+        - statut : StatutCommande
+        - dateLivraison : Date
+        - notes : Text
+        - dateCreation : DateTime
+        --
+        + confirmer() : void
+        + lancerProduction() : OrdreFabrication
+        + suivre() : StatutCommande
+    }
+
+    class OrdreFabrication {
+        - id : UUID
+        - numeroProduction : String
+        - statut : StatutOF
+        - dateDebutPrevue : DateTime
+        - dateFinPrevue : DateTime
+        - dateDebutReelle : DateTime
+        - dateFinReelle : DateTime
+        - notes : Text
+        --
+        + planifier() : void
+        + demarrer() : void
+        + terminer() : void
+    }
+
+    class BonLivraison {
+        - id : UUID
+        - numeroLivraison : String
+        - statut : StatutLivraison
+        - dateLivraison : Date
+        - nomChauffeur : String
+        - signePar : String
+        --
+        + preparer() : void
+        + expedier() : void
+        + confirmerLivraison() : void
+        + genererPDF() : File
+    }
+
+    class Facture {
+        - id : UUID
+        - numeroFacture : String
+        - statut : StatutFacture
+        - dateEmission : Date
+        - dateEcheance : Date
+        - conditionsPaiement : String
+        - sousTotal : Decimal
+        - montantTVA : Decimal
+        - total : Decimal
+        - datePaiement : Date
+        --
+        + generer() : void
+        + envoyer() : void
+        + marquerPayee() : void
+        + genererPDF() : File
+    }
+
+    enum TypeProfil {
+        CORNIERE
+        TUBE
+        PLAT
+        UPN
+        IPE
+        AUTRE
+    }
+
+    enum StatutDevis {
+        BROUILLON
+        ENVOYE
+        ACCEPTE
+        REFUSE
+        EXPIRE
+    }
+
+    enum StatutCommande {
+        EN_ATTENTE
+        CONFIRMEE
+        EN_PRODUCTION
+        TERMINEE
+    }
+
+    enum StatutOF {
+        PLANIFIE
+        EN_COURS
+        TERMINE
+    }
+
+    enum StatutLivraison {
+        PREPAREE
+        EXPEDIEE
+        LIVREE
+    }
+
+    enum StatutFacture {
+        BROUILLON
+        ENVOYEE
+        PAYEE
+    }
+}
+
+
+' ************************************************************
+'  MODULE B : STOCK AVANCÉ
+' ************************************************************
+package "Stock Avancé" <<Frame>> {
+
+    class Entrepot {
+        - id : UUID
+        - nom : String
+        - code : String
+        - adresse : String
+        - estActif : Boolean
+        - dateCreation : DateTime
+        --
+        + creer() : void
+        + desactiver() : void
+        + consulterStock() : List
+    }
+
+    class Emplacement {
+        - id : UUID
+        - zone : String
+        - rack : String
+        - allee : String
+        - niveau : String
+        - capacite : Integer
+        - estActif : Boolean
+        --
+        + creer() : void
+        + consulter() : Emplacement
+    }
+
+    class ArticleStock {
+        - id : UUID
+        - numeroLot : String
+        - quantite : Integer
+        - coutUnitaire : Decimal
+        - dateMiseAJour : DateTime
+        --
+        + mettreAJour() : void
+        + verifierSeuil() : Boolean
+    }
+
+    class MouvementStock {
+        - id : UUID
+        - typeMouvement : TypeMouvement
+        - quantite : Integer
+        - typeReference : String
+        - idReference : UUID
+        - notes : Text
+        - horodatage : DateTime
+        --
+        + enregistrer() : void
+        + consulterHistorique() : List
+    }
+
+    class AlerteStock {
+        - id : UUID
+        - seuil : Integer
+        - estActive : Boolean
+        - dateCreation : DateTime
+        - dateAcquittement : DateTime
+        --
+        + declencher() : void
+        + acquitter() : void
+        + notifierParEmail() : void
+    }
+
+    class InventaireComptage {
+        - id : UUID
+        - statut : StatutInventaire
+        - dateLancement : DateTime
+        - dateCloture : DateTime
+        --
+        + initier() : void
+        + valider() : void
+        + cloturer() : void
+    }
+
+    class LigneInventaire {
+        - id : UUID
+        - quantiteComptee : Integer
+        - quantiteSysteme : Integer
+        - ecart : Integer
+        --
+        + enregistrerComptage() : void
+        + approuverAjustement() : void
+    }
+
+    enum TypeMouvement {
+        ENTREE
+        SORTIE
+        TRANSFERT
+        AJUSTEMENT
+    }
+
+    enum StatutInventaire {
+        EN_COURS
+        VALIDE
+        CLOTURE
+    }
+}
+
+
+' ************************************************************
+'  MODULE C : MAINTENANCE INDUSTRIELLE
+' ************************************************************
+package "Maintenance Industrielle" <<Frame>> {
+
+    class Machine {
+        - id : UUID
+        - designation : String
+        - marque : String
+        - modele : String
+        - numeroSerie : String
+        - dateAchat : Date
+        - valeurAcquisition : Decimal
+        - valeurResiduelle : Decimal
+        - statut : StatutMachine
+        - dateCreation : DateTime
+        --
+        + creer() : void
+        + archiver() : void
+        + calculerAmortissement() : Decimal
+        + calculerTRS() : Decimal
+        + calculerMTBF() : Decimal
+        + calculerMTTR() : Decimal
+    }
+
+    class DocumentMachine {
+        - id : UUID
+        - typeDocument : String
+        - cheminFichier : String
+        - dateUpload : DateTime
+        --
+        + telecharger() : File
+    }
+
+    class PlanMaintenance {
+        - id : UUID
+        - description : String
+        - frequence : FrequenceMaintenance
+        - frequenceJours : Integer
+        - prochaineDateEcheance : Date
+        - estActif : Boolean
+        --
+        + planifier() : void
+        + genererOT() : OrdreTravail
+        + reprogrammer() : void
+    }
+
+    class OrdreTravail {
+        - id : UUID
+        - numeroOT : String
+        - type : TypeMaintenance
+        - statut : StatutOT
+        - priorite : PrioriteOT
+        - description : Text
+        - datePrevue : Date
+        - debutReel : DateTime
+        - finReelle : DateTime
+        - heuresMainOeuvre : Decimal
+        - coutMainOeuvre : Decimal
+        - coutTotal : Decimal
+        - notes : Text
+        - dateCreation : DateTime
+        - dateCloture : DateTime
+        --
+        + creer() : void
+        + assigner() : void
+        + demarrer() : void
+        + terminer() : void
+        + cloturer() : void
+    }
+
+    class PieceOrdreTravail {
+        - id : UUID
+        - quantite : Integer
+        - coutUnitaire : Decimal
+        --
+        + deduireDuStock() : void
+    }
+
+    class FichePanne {
+        - id : UUID
+        - dateSignalement : DateTime
+        - tempsReponseMinutes : Integer
+        - tempsReparationMinutes : Integer
+        - causeRacine : Text
+        --
+        + signaler() : void
+        + qualifier() : void
+    }
+
+    enum TypeMaintenance {
+        PREVENTIVE
+        CORRECTIVE
+    }
+
+    enum StatutMachine {
+        EN_SERVICE
+        EN_PANNE
+        EN_MAINTENANCE
+        HORS_SERVICE
+    }
+
+    enum StatutOT {
+        CREE
+        ASSIGNE
+        EN_COURS
+        TERMINE
+        CLOTURE
+    }
+
+    enum PrioriteOT {
+        CRITIQUE
+        MAJEURE
+        MINEURE
+    }
+
+    enum FrequenceMaintenance {
+        QUOTIDIENNE
+        HEBDOMADAIRE
+        MENSUELLE
+        TRIMESTRIELLE
+        ANNUELLE
+    }
+}
+
+
+' ************************************************************
+'  MODULE D : CONTRÔLE QUALITÉ
+' ************************************************************
+package "Contrôle Qualité" <<Frame>> {
+
+    class PointInspection {
+        - id : UUID
+        - etapeProduction : String
+        - nom : String
+        - description : Text
+        - estObligatoire : Boolean
+        --
+        + configurer() : void
+    }
+
+    class CritereInspection {
+        - id : UUID
+        - nomParametre : String
+        - valeurNominale : Decimal
+        - toleranceMin : Decimal
+        - toleranceMax : Decimal
+        - unite : String
+        --
+        + definir() : void
+        + verifierConformite(valeur: Decimal) : Boolean
+    }
+
+    class EnregistrementInspection {
+        - id : UUID
+        - statut : ResultatInspection
+        - resultat : String
+        - valeursRelevees : JSON
+        - dateSignature : DateTime
+        --
+        + enregistrer() : void
+        + signer() : void
+    }
+
+    class NonConformite {
+        - id : UUID
+        - numeroNC : String
+        - numeroLot : String
+        - description : Text
+        - gravite : GraviteNC
+        - statut : StatutNC
+        - dateDetection : DateTime
+        - dateCloture : DateTime
+        --
+        + creer() : void
+        + analyser() : void
+        + traiter() : void
+        + cloturer() : void
+    }
+
+    class AnalyseCauseRacine {
+        - id : UUID
+        - methode : MethodeAnalyse
+        - analyseJSON : JSON
+        - causeIdentifiee : Text
+        - categorie : CategorieIshikawa
+        --
+        + analyser() : void
+        + identifier() : void
+    }
+
+    class ActionCorrective {
+        - id : UUID
+        - description : Text
+        - dateEcheance : Date
+        - statut : StatutAction
+        - dateRealisation : DateTime
+        - verificationEfficacite : Text
+        --
+        + creer() : void
+        + realiser() : void
+        + verifier() : void
+    }
+
+    class DecisionQualite {
+        - id : UUID
+        - typeDecision : TypeDecisionQ
+        - dateApprobation : DateTime
+        - notes : Text
+        --
+        + decider() : void
+        + approuver() : void
+    }
+
+    enum ResultatInspection {
+        CONFORME
+        NON_CONFORME
+    }
+
+    enum GraviteNC {
+        CRITIQUE
+        MAJEUR
+        MINEUR
+    }
+
+    enum StatutNC {
+        OUVERTE
+        EN_ANALYSE
+        EN_TRAITEMENT
+        CLOTUREE
+    }
+
+    enum MethodeAnalyse {
+        CINQ_POURQUOI
+        ISHIKAWA
+    }
+
+    enum CategorieIshikawa {
+        MACHINE
+        METHODE
+        MATIERE
+        MAIN_OEUVRE
+        MILIEU
+    }
+
+    enum TypeDecisionQ {
+        CONFORME
+        A_RETRAVAILLER
+        REBUT
+        DEROGATION
+        RETOUR_FOURNISSEUR
+    }
+
+    enum StatutAction {
+        A_FAIRE
+        EN_COURS
+        TERMINEE
+        VERIFIEE
+    }
+}
+
+
+' ************************************************************
+'  MODULE E : COMPTABILITÉ ANALYTIQUE
+' ************************************************************
+package "Comptabilité Analytique" <<Frame>> {
+
+    class ComposantCout {
+        - id : UUID
+        - nom : String
+        - type : TypeCout
+        - valeur : Decimal
+        - unite : String
+        --
+        + definir() : void
+        + modifier() : void
+    }
+
+    class CoutProduit {
+        - id : UUID
+        - coutMatiere : Decimal
+        - coutMainOeuvre : Decimal
+        - fraisGeneraux : Decimal
+        - coutRevientTotal : Decimal
+        --
+        + calculer() : Decimal
+        + recalculer() : void
+    }
+
+    class AnalyseRentabiliteCommande {
+        - id : UUID
+        - margeBrute : Decimal
+        - margeNette : Decimal
+        - rentabiliteReelleVsPrevue : Decimal
+        --
+        + calculerMarge() : Decimal
+    }
+
+    class RentabiliteClient {
+        - id : UUID
+        - chiffreAffaireTotal : Decimal
+        - nombreCommandes : Integer
+        - panierMoyen : Decimal
+        - rentabilite : Decimal
+        --
+        + calculer() : void
+        + consulter() : RentabiliteClient
+    }
+
+    class PerformanceCommercial {
+        - id : UUID
+        - caRealise : Decimal
+        - tauxConversion : Decimal
+        - nombreDevis : Integer
+        --
+        + calculer() : void
+        + classerLeaderboard() : Integer
+    }
+
+    class KPIFinancier {
+        - id : UUID
+        - chiffreAffaire : Decimal
+        - margeBrute : Decimal
+        - margeNette : Decimal
+        - dso : Decimal
+        - tauxRetardPaiement : Decimal
+        - periode : String
+        --
+        + calculer() : void
+        + actualiser() : void
+    }
+
+    class AncienneteCreances {
+        - id : UUID
+        - tranche0_30 : Decimal
+        - tranche31_60 : Decimal
+        - tranche61_90 : Decimal
+        - tranchePlus90 : Decimal
+        --
+        + calculer() : void
+    }
+
+    class ROIEquipement {
+        - id : UUID
+        - investissementInitial : Decimal
+        - revenusGeneres : Decimal
+        - coutsMaintenance : Decimal
+        - roi : Decimal
+        - periodeRetour : Integer
+        --
+        + calculer() : Decimal
+    }
+
+    enum TypeCout {
+        MATIERE
+        MAIN_OEUVRE
+        FRAIS_GENERAUX
+        AMORTISSEMENT
+    }
+}
+
+
+' ************************************************************
+'  MODULE F : BUSINESS INTELLIGENCE
+' ************************************************************
+package "Business Intelligence" <<Frame>> {
+
+    class TableauBord {
+        - id : UUID
+        - nom : String
+        - type : TypeTableauBord
+        - estDefaut : Boolean
+        - disposition : JSON
+        - dateCreation : DateTime
+        --
+        + creer() : void
+        + personnaliser() : void
+        + exporter() : File
+    }
+
+    class Widget {
+        - id : UUID
+        - typeWidget : TypeWidget
+        - sourcesDonnees : String
+        - configuration : JSON
+        - largeur : Integer
+        - hauteur : Integer
+        - positionX : Integer
+        - positionY : Integer
+        --
+        + configurer() : void
+        + actualiserDonnees() : void
+    }
+
+    enum TypeTableauBord {
+        EXECUTIF
+        OPERATIONS
+        FINANCE
+        TECHNIQUE
+        PERSONNALISE
+    }
+
+    enum TypeWidget {
+        CARTE_KPI
+        GRAPHIQUE_LIGNE
+        GRAPHIQUE_BARRES
+        GRAPHIQUE_CAMEMBERT
+        GRAPHIQUE_AIRE
+        TABLEAU_DONNEES
+        JAUGE
+        CARTE_CHALEUR
+    }
+}
+
+
+' ************************************************************
+'  MODULE G : INTELLIGENCE ARTIFICIELLE
+' ************************************************************
+package "Intelligence Artificielle" <<Frame>> {
+
+    class ModeleIA {
+        - id : UUID
+        - nom : String
+        - typeModele : TypeModeleIA
+        - version : String
+        - parametres : JSON
+        - metriquePrecision : Decimal
+        - estActif : Boolean
+        - dateEntrainement : DateTime
+        --
+        + entrainer() : void
+        + evaluer() : Decimal
+        + deployer() : void
+    }
+
+    class PrevisionDemande {
+        - id : UUID
+        - horizon : HorizonPrevision
+        - quantitePrevue : Integer
+        - intervalleConfiance80 : Decimal
+        - intervalleConfiance95 : Decimal
+        - mape : Decimal
+        - dateGeneration : DateTime
+        --
+        + generer() : void
+        + comparer() : Decimal
+    }
+
+    class AlerteRuptureStock {
+        - id : UUID
+        - dateRupturePrevue : Date
+        - niveauCriticite : NiveauCriticite
+        - quantiteRecommandee : Integer
+        - dateRecommandation : Date
+        --
+        + predire() : void
+        + recommander() : Integer
+    }
+
+    class OptimisationApprovisionnement {
+        - id : UUID
+        - quantiteEconomique : Integer
+        - pointRecommande : Integer
+        - stockSecurite : Integer
+        - coutStockage : Decimal
+        - coutPassation : Decimal
+        --
+        + calculerEOQ() : Integer
+        + calculerPointRecommande() : Integer
+    }
+
+    class RecommandationProduction {
+        - id : UUID
+        - sequenceOptimale : JSON
+        - gainTempsSetup : Decimal
+        - conflitsRessources : JSON
+        - chargeAtelier : JSON
+        --
+        + optimiserSequence() : void
+        + detecterConflits() : List
+    }
+
+    enum TypeModeleIA {
+        SARIMA
+        PROPHET
+        LSTM
+        SCIKIT_LEARN
+    }
+
+    enum HorizonPrevision {
+        COURT_TERME_1_4_SEM
+        MOYEN_TERME_1_3_MOIS
+    }
+
+    enum NiveauCriticite {
+        FAIBLE
+        MOYEN
+        ELEVE
+        CRITIQUE
+    }
+}
+
+
+' ************************************************************
+'  RELATIONS — AUTHENTIFICATION & SÉCURITÉ
+' ************************************************************
+Utilisateur "1" -- "1" Role : possède >
+Role "1" -- "*" Permission : contient >
+Utilisateur "1" -- "*" JournalAudit : génère >
+
+
+' ************************************************************
+'  RELATIONS — MÉTIER ALUMINIUM
+' ************************************************************
+Client "1" -- "*" Devis : demande >
+Utilisateur "1" -- "*" Devis : crée >
+Devis "1" -- "*" LigneDevis : contient >
+ProfilAluminium "1" -- "*" LigneDevis : référence >
+Devis "1" -- "0..1" Commande : converti en >
+Client "1" -- "*" Commande : passe >
+Commande "1" -- "0..1" OrdreFabrication : déclenche >
+Commande "1" -- "0..1" BonLivraison : génère >
+Commande "1" -- "0..1" Facture : facturé par >
+
+
+' ************************************************************
+'  RELATIONS — STOCK AVANCÉ
+' ************************************************************
+Entrepot "1" -- "*" Emplacement : contient >
+Entrepot "1" -- "*" ArticleStock : stocke >
+Emplacement "1" -- "*" ArticleStock : localise >
+ProfilAluminium "1" -- "*" ArticleStock : correspond à >
+ProfilAluminium "1" -- "*" MouvementStock : concerne >
+Entrepot "1" -- "*" MouvementStock : enregistré dans >
+Utilisateur "1" -- "*" MouvementStock : effectue >
+ProfilAluminium "1" -- "*" AlerteStock : surveille >
+Entrepot "1" -- "*" InventaireComptage : inventorie >
+Utilisateur "1" -- "*" InventaireComptage : initie >
+InventaireComptage "1" -- "*" LigneInventaire : contient >
+ProfilAluminium "1" -- "*" LigneInventaire : concerne >
+
+
+' ************************************************************
+'  RELATIONS — MAINTENANCE INDUSTRIELLE
+' ************************************************************
+Machine "1" -- "*" DocumentMachine : documente >
+Machine "1" -- "*" PlanMaintenance : planifié par >
+Machine "1" -- "*" OrdreTravail : fait l'objet de >
+PlanMaintenance "1" -- "*" OrdreTravail : génère >
+Utilisateur "1" -- "*" OrdreTravail : assigné à >
+OrdreTravail "1" -- "*" PieceOrdreTravail : utilise >
+OrdreTravail "1" -- "0..1" FichePanne : liée à >
+ArticleStock "1" -- "*" PieceOrdreTravail : fournit >
+
+
+' ************************************************************
+'  RELATIONS — CONTRÔLE QUALITÉ
+' ************************************************************
+PointInspection "1" -- "*" CritereInspection : définit >
+OrdreFabrication "1" -- "*" EnregistrementInspection : inspecté par >
+PointInspection "1" -- "*" EnregistrementInspection : applique >
+Utilisateur "1" -- "*" EnregistrementInspection : effectue >
+EnregistrementInspection "1" -- "0..1" NonConformite : révèle >
+OrdreFabrication "1" -- "*" NonConformite : concerne >
+Utilisateur "1" -- "*" NonConformite : détecte >
+NonConformite "1" -- "0..1" AnalyseCauseRacine : analysée par >
+NonConformite "1" -- "*" ActionCorrective : corrigée par >
+NonConformite "1" -- "0..1" DecisionQualite : décidée par >
+Utilisateur "1" -- "*" ActionCorrective : assignée à >
+Utilisateur "1" -- "*" DecisionQualite : approuve >
+
+
+' ************************************************************
+'  RELATIONS — COMPTABILITÉ ANALYTIQUE
+' ************************************************************
+ComposantCout "1" -- "*" CoutProduit : compose >
+ProfilAluminium "1" -- "0..1" CoutProduit : évalué par >
+Commande "1" -- "0..1" AnalyseRentabiliteCommande : analysée par >
+Client "1" -- "0..1" RentabiliteClient : évalue >
+Utilisateur "1" -- "0..1" PerformanceCommercial : mesure >
+Facture "*" -- "0..1" KPIFinancier : alimente >
+Facture "*" -- "0..1" AncienneteCreances : classe >
+Machine "1" -- "0..1" ROIEquipement : retour sur >
+
+
+' ************************************************************
+'  RELATIONS — BUSINESS INTELLIGENCE
+' ************************************************************
+TableauBord "1" -- "*" Widget : contient >
+Utilisateur "1" -- "*" TableauBord : consulte >
+
+
+' ************************************************************
+'  RELATIONS — INTELLIGENCE ARTIFICIELLE
+' ************************************************************
+ModeleIA "1" -- "*" PrevisionDemande : produit >
+ProfilAluminium "1" -- "*" PrevisionDemande : prédit pour >
+ProfilAluminium "1" -- "*" AlerteRuptureStock : surveille >
+ProfilAluminium "1" -- "*" OptimisationApprovisionnement : optimise >
+ModeleIA "1" -- "*" RecommandationProduction : recommande >
+
+@enduml

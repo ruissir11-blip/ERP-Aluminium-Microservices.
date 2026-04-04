@@ -1,0 +1,917 @@
+openapi: 3.0.3
+info:
+  title: ERP Aluminium - Stock Module API
+  description: |
+    Advanced Stock Management API for multi-warehouse inventory tracking,
+    lot traceability, FIFO valuation, and stock movement auditing.
+  version: 1.0.0
+  contact:
+    name: ERP Aluminium Team
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Development server
+  - url: https://api.erp-aluminium.local/api/v1
+    description: Production server
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Warehouses
+    description: Warehouse management
+  - name: Locations
+    description: Storage location management
+  - name: Inventory
+    description: Stock level management and queries
+  - name: Movements
+    description: Stock movement tracking and history
+  - name: Lots
+    description: Lot tracking and traceability
+  - name: Alerts
+    description: Stock threshold alerts
+  - name: Inventory Counts
+    description: Physical inventory counting workflow
+
+paths:
+  # Warehouses
+  /warehouses:
+    get:
+      summary: List warehouses
+      tags: [Warehouses]
+      parameters:
+        - name: includeInactive
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: List of warehouses
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Warehouse'
+    post:
+      summary: Create warehouse
+      tags: [Warehouses]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WarehouseInput'
+      responses:
+        '201':
+          description: Warehouse created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Warehouse'
+
+  /warehouses/{id}:
+    get:
+      summary: Get warehouse details
+      tags: [Warehouses]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Warehouse details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Warehouse'
+    put:
+      summary: Update warehouse
+      tags: [Warehouses]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WarehouseInput'
+      responses:
+        '200':
+          description: Warehouse updated
+
+  # Inventory
+  /inventory:
+    get:
+      summary: Query inventory levels
+      tags: [Inventory]
+      parameters:
+        - name: profileId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: warehouseId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: locationId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: lotId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: lowStock
+          in: query
+          description: Filter items below minimum threshold
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Inventory items list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/InventoryItem'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+
+  /inventory/summary:
+    get:
+      summary: Get inventory summary by warehouse
+      tags: [Inventory]
+      parameters:
+        - name: warehouseId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Inventory summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      totalItems:
+                        type: integer
+                      totalValue:
+                        type: number
+                      lowStockCount:
+                        type: integer
+
+  /inventory/transfer:
+    post:
+      summary: Transfer stock between locations
+      tags: [Inventory]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockTransferInput'
+      responses:
+        '200':
+          description: Transfer completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/StockMovement'
+
+  # Movements
+  /movements:
+    get:
+      summary: Query stock movement history
+      tags: [Movements]
+      parameters:
+        - name: profileId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: warehouseId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: movementType
+          in: query
+          schema:
+            type: string
+            enum: [RECEIPT, ISSUE, TRANSFER, ADJUSTMENT, COUNT]
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Movement history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/StockMovement'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+
+  # Lots
+  /lots:
+    get:
+      summary: List lots
+      tags: [Lots]
+      parameters:
+        - name: profileId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: supplierId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: qualityStatus
+          in: query
+          schema:
+            type: string
+            enum: [APPROVED, QUARANTINE, REJECTED]
+      responses:
+        '200':
+          description: Lots list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Lot'
+    post:
+      summary: Create lot (on receipt)
+      tags: [Lots]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LotInput'
+      responses:
+        '201':
+          description: Lot created
+
+  /lots/{id}:
+    get:
+      summary: Get lot details
+      tags: [Lots]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Lot details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Lot'
+
+  /lots/{id}/traceability:
+    get:
+      summary: Get lot traceability chain
+      tags: [Lots]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Traceability chain
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LotTraceability'
+
+  # Alerts
+  /alerts:
+    get:
+      summary: List stock alerts
+      tags: [Alerts]
+      parameters:
+        - name: profileId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: warehouseId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: isTriggered
+          in: query
+          schema:
+            type: boolean
+        - name: isActive
+          in: query
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Alerts list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/StockAlert'
+    post:
+      summary: Create alert threshold
+      tags: [Alerts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockAlertInput'
+      responses:
+        '201':
+          description: Alert created
+
+  /alerts/{id}/acknowledge:
+    post:
+      summary: Acknowledge triggered alert
+      tags: [Alerts]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Alert acknowledged
+
+  # Inventory Counts
+  /inventory-counts:
+    get:
+      summary: List inventory counts
+      tags: [Inventory Counts]
+      parameters:
+        - name: warehouseId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [DRAFT, IN_PROGRESS, VARIANCE_REVIEW, ADJUSTMENT_APPROVED, COMPLETED, CANCELLED]
+      responses:
+        '200':
+          description: Inventory counts list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/InventoryCount'
+    post:
+      summary: Create inventory count
+      tags: [Inventory Counts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryCountInput'
+      responses:
+        '201':
+          description: Count created
+
+  /inventory-counts/{id}:
+    get:
+      summary: Get count details with lines
+      tags: [Inventory Counts]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Count details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      count:
+                        $ref: '#/components/schemas/InventoryCount'
+                      lines:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/InventoryCountLine'
+
+  /inventory-counts/{id}/submit:
+    post:
+      summary: Submit count for variance review
+      tags: [Inventory Counts]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Count submitted for review
+
+  /inventory-counts/{id}/approve:
+    post:
+      summary: Approve variances and apply adjustments
+      tags: [Inventory Counts]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                approvedLineIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        '200':
+          description: Adjustments applied
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Warehouse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        address:
+          type: string
+        contactName:
+          type: string
+        contactEmail:
+          type: string
+        contactPhone:
+          type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    WarehouseInput:
+      type: object
+      required: [code, name]
+      properties:
+        code:
+          type: string
+          maxLength: 20
+        name:
+          type: string
+          maxLength: 100
+        address:
+          type: string
+        contactName:
+          type: string
+        contactEmail:
+          type: string
+        contactPhone:
+          type: string
+
+    InventoryItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        profileId:
+          type: string
+          format: uuid
+        warehouseId:
+          type: string
+          format: uuid
+        locationId:
+          type: string
+          format: uuid
+        lotId:
+          type: string
+          format: uuid
+        quantityOnHand:
+          type: number
+        quantityReserved:
+          type: number
+        quantityAvailable:
+          type: number
+        averageUnitCost:
+          type: number
+        lastMovementDate:
+          type: string
+          format: date-time
+
+    StockMovement:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        profileId:
+          type: string
+          format: uuid
+        warehouseId:
+          type: string
+          format: uuid
+        movementType:
+          type: string
+          enum: [RECEIPT, ISSUE, TRANSFER, ADJUSTMENT, COUNT]
+        quantity:
+          type: number
+        unitCost:
+          type: number
+        referenceType:
+          type: string
+        referenceId:
+          type: string
+        performedBy:
+          type: string
+        performedAt:
+          type: string
+          format: date-time
+        previousQuantity:
+          type: number
+        newQuantity:
+          type: number
+
+    StockTransferInput:
+      type: object
+      required: [profileId, sourceWarehouseId, destinationWarehouseId, quantity]
+      properties:
+        profileId:
+          type: string
+          format: uuid
+        sourceWarehouseId:
+          type: string
+          format: uuid
+        destinationWarehouseId:
+          type: string
+          format: uuid
+        sourceLocationId:
+          type: string
+          format: uuid
+        destinationLocationId:
+          type: string
+          format: uuid
+        lotId:
+          type: string
+          format: uuid
+        quantity:
+          type: number
+        notes:
+          type: string
+
+    Lot:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        lotNumber:
+          type: string
+        profileId:
+          type: string
+          format: uuid
+        supplierId:
+          type: string
+          format: uuid
+        receiptDate:
+          type: string
+          format: date
+        initialQuantity:
+          type: number
+        remainingQuantity:
+          type: number
+        unitCost:
+          type: number
+        certificateOfConformity:
+          type: string
+        expiryDate:
+          type: string
+          format: date
+        qualityStatus:
+          type: string
+          enum: [APPROVED, QUARANTINE, REJECTED]
+
+    LotInput:
+      type: object
+      required: [lotNumber, profileId, supplierId, receiptDate, initialQuantity, unitCost]
+      properties:
+        lotNumber:
+          type: string
+        profileId:
+          type: string
+          format: uuid
+        supplierId:
+          type: string
+          format: uuid
+        receiptDate:
+          type: string
+          format: date
+        initialQuantity:
+          type: number
+        unitCost:
+          type: number
+        certificateOfConformity:
+          type: string
+        expiryDate:
+          type: string
+          format: date
+
+    LotTraceability:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        eventType:
+          type: string
+          enum: [RECEIPT, PRODUCTION, DELIVERY, RETURN, TRANSFER]
+        eventDate:
+          type: string
+          format: date-time
+        referenceType:
+          type: string
+        referenceId:
+          type: string
+        quantity:
+          type: number
+        remainingQuantity:
+          type: number
+
+    StockAlert:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        profileId:
+          type: string
+          format: uuid
+        warehouseId:
+          type: string
+          format: uuid
+        minimumThreshold:
+          type: number
+        maximumThreshold:
+          type: number
+        reorderPoint:
+          type: number
+        emailRecipients:
+          type: array
+          items:
+            type: string
+        isActive:
+          type: boolean
+        isTriggered:
+          type: boolean
+        lastTriggeredAt:
+          type: string
+          format: date-time
+
+    StockAlertInput:
+      type: object
+      required: [profileId, minimumThreshold]
+      properties:
+        profileId:
+          type: string
+          format: uuid
+        warehouseId:
+          type: string
+          format: uuid
+        minimumThreshold:
+          type: number
+        maximumThreshold:
+          type: number
+        reorderPoint:
+          type: number
+        emailRecipients:
+          type: array
+          items:
+            type: string
+
+    InventoryCount:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        countNumber:
+          type: string
+        warehouseId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [DRAFT, IN_PROGRESS, VARIANCE_REVIEW, ADJUSTMENT_APPROVED, COMPLETED, CANCELLED]
+        countType:
+          type: string
+          enum: [FULL, CYCLE, SPOT]
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        initiatedBy:
+          type: string
+          format: uuid
+
+    InventoryCountInput:
+      type: object
+      required: [warehouseId, countType]
+      properties:
+        warehouseId:
+          type: string
+          format: uuid
+        countType:
+          type: string
+          enum: [FULL, CYCLE, SPOT]
+        notes:
+          type: string
+
+    InventoryCountLine:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        profileId:
+          type: string
+          format: uuid
+        locationId:
+          type: string
+          format: uuid
+        lotId:
+          type: string
+          format: uuid
+        systemQuantity:
+          type: number
+        countedQuantity:
+          type: number
+        variance:
+          type: number
+        variancePercentage:
+          type: number
+        countStatus:
+          type: string
+        reasonCode:
+          type: string
+        notes:
+          type: string
+
+    PaginationMeta:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer

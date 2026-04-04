@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERP Aluminium - Financial Dashboard</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <!-- Login Page -->
+    <div id="loginPage" class="page">
+        <div class="login-container">
+            <div class="login-card">
+                <div class="login-logo">
+                    <h1><i class="fas fa-industry"></i> ERP Aluminium</h1>
+                    <p>Financial Management System</p>
+                </div>
+                
+                <form id="loginForm" class="login-form">
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" placeholder="Enter your username" autocomplete="username">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" placeholder="Enter your password" autocomplete="current-password">
+                        <div id="errorMessage" class="error-message">Invalid username or password</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="rememberMe">
+                            <label for="rememberMe">Remember me</label>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary btn-block">
+                        <i class="fas fa-sign-in-alt"></i> Sign In
+                    </button>
+                </form>
+                
+                <div class="login-footer">
+                    <span class="demo-link" id="demoLink">
+                        <i class="fas fa-play-circle"></i> Enter Demo Mode
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div id="appPage" class="app-container" style="display: none;">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">EA</div>
+                <span class="sidebar-title">ERP Aluminium</span>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Main</div>
+                    <div class="nav-item active" data-page="dashboard">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Dashboard</span>
+                    </div>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Finance</div>
+                    <div class="nav-item" data-page="accounting">
+                        <i class="fas fa-calculator"></i>
+                        <span>Accounting</span>
+                    </div>
+                    <div class="nav-item" data-page="costAnalysis">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Cost Analysis</span>
+                    </div>
+                    <div class="nav-item" data-page="reports">
+                        <i class="fas fa-file-alt"></i>
+                        <span>Reports</span>
+                    </div>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">System</div>
+                    <div class="nav-item">
+                        <i class="fas fa-cog"></i>
+                        <span>Settings</span>
+                    </div>
+                    <div class="nav-item" id="logoutBtn">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Logout</span>
+                    </div>
+                </div>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <button class="sidebar-toggle" id="sidebarToggle">
+                    <i class="fas fa-bars"></i>
+                    <span>Collapse</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="app-header">
+                <div class="header-left">
+                    <h2 class="header-title" id="headerTitle">Financial Dashboard</h2>
+                </div>
+                <div class="header-right">
+                    <div class="header-user">
+                        <div class="user-avatar" id="userAvatar">A</div>
+                        <div class="user-info">
+                            <div class="user-name" id="userName">Admin</div>
+                            <div class="user-role" id="userRole">Administrator</div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content Area -->
+            <div class="content-area">
+                <!-- Dashboard Page -->
+                <div id="dashboardPage" class="page active">
+                    <div class="dashboard-header">
+                        <h1 class="dashboard-title">Financial Overview</h1>
+                        <div class="quick-actions">
+                            <button class="btn btn-primary" id="addExpenseBtn">
+                                <i class="fas fa-plus"></i> Add Expense
+                            </button>
+                            <button class="btn btn-secondary" id="generateReportBtn">
+                                <i class="fas fa-file-export"></i> Generate Report
+                            </button>
+                            <button class="btn btn-outline" id="viewInvoicesBtn">
+                                <i class="fas fa-file-invoice"></i> View Invoices
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- KPI Cards -->
+                    <div class="kpi-grid">
+                        <div class="kpi-card">
+                            <div class="kpi-header">
+                                <span class="kpi-label">Total Revenue</span>
+                                <div class="kpi-icon revenue"><i class="fas fa-euro-sign"></i></div>
+                            </div>
+                            <div class="kpi-value" id="revenueValue">€0</div>
+                            <div class="kpi-footer">
+                                <span class="kpi-trend" id="revenueTrend">
+                                    <i class="fas fa-arrow-up"></i> 0%
+                                </span>
+                                <span class="text-secondary">vs last month</span>
+                            </div>
+                        </div>
+                        
+                        <div class="kpi-card">
+                            <div class="kpi-header">
+                                <span class="kpi-label">Total Expenses</span>
+                                <div class="kpi-icon expenses"><i class="fas fa-wallet"></i></div>
+                            </div>
+                            <div class="kpi-value" id="expensesValue">€0</div>
+                            <div class="kpi-footer">
+                                <span class="kpi-trend" id="expensesTrend">
+                                    <i class="fas fa-arrow-down"></i> 0%
+                                </span>
+                                <span class="text-secondary">vs last month</span>
+                            </div>
+                        </div>
+                        
+                        <div class="kpi-card">
+                            <div class="kpi-header">
+                                <span class="kpi-label">Net Profit</span>
+                                <div class="kpi-icon profit"><i class="fas fa-chart-pie"></i></div>
+                            </div>
+                            <div class="kpi-value" id="profitValue">€0</div>
+                            <div class="kpi-footer">
+                                <span class="kpi-status positive" id="profitPercent">0%</span>
+                                <span class="text-secondary">profit margin</span>
+                            </div>
+                        </div>
+                        
+                        <div class="kpi-card">
+                            <div class="kpi-header">
+                                <span class="kpi-label">Cash Flow</span>
+                                <div class="kpi-icon cashflow"><i class="fas fa-exchange-alt"></i></div>
+                            </div>
+                            <div class="kpi-value" id="cashFlowValue">€0</div>
+                            <div class="kpi-footer">
+                                <span class="kpi-status positive" id="cashFlowStatus">Positive</span>
+                                <span class="text-secondary">this month</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts -->
+                    <div class="charts-grid">
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <h3 class="chart-title">Revenue Trend</h3>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="revenueChart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <h3 class="chart-title">Expense Breakdown</h3>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="expenseChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Transactions Table -->
+                    <div class="table-card">
+                        <div class="table-header">
+                            <h3 class="table-title">Recent Transactions</h3>
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Description</th>
+                                    <th>Category</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactionsBody">
+                                <!-- Populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Accounting Page -->
+                <div id="accountingPage" class="page">
+                    <div class="module-header">
+                        <h1 class="module-title">Accounting</h1>
+                        <div class="module-actions">
+                            <button class="btn btn-primary" onclick="openModal('transactionModal')">
+                                <i class="fas fa-plus"></i> New Transaction
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="filter-bar">
+                        <input type="text" class="search-input" id="accountSearch" placeholder="Search accounts...">
+                        <select class="filter-select">
+                            <option value="">All Types</option>
+                            <option value="Asset">Asset</option>
+                            <option value="Liability">Liability</option>
+                            <option value="Equity">Equity</option>
+                            <option value="Revenue">Revenue</option>
+                            <option value="Expense">Expense</option>
+                        </select>
+                    </div>
+
+                    <div class="module-card">
+                        <div class="module-card-header">
+                            <h3 class="module-card-title">Chart of Accounts</h3>
+                        </div>
+                        <div id="accountList">
+                            <!-- Populated by JavaScript -->
+                        </div>
+                    </div>
+
+                    <div class="module-card">
+                        <div class="module-card-header">
+                            <h3 class="module-card-title">Trial Balance</h3>
+                        </div>
+                        <div class="trial-balance-grid">
+                            <div class="trial-balance-column">
+                                <h4>Debit</h4>
+                                <div id="debitAccounts">
+                                    <!-- Populated by JavaScript -->
+                                </div>
+                                <div class="trial-balance-row total">
+                                    <span>Total Debit</span>
+                                    <span class="font-mono" id="debitTotal">€0</span>
+                                </div>
+                            </div>
+                            <div class="trial-balance-column">
+                                <h4>Credit</h4>
+                                <div id="creditAccounts">
+                                    <!-- Populated by JavaScript -->
+                                </div>
+                                <div class="trial-balance-row total">
+                                    <span>Total Credit</span>
+                                    <span class="font-mono" id="creditTotal">€0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cost Analysis Page -->
+                <div id="costAnalysisPage" class="page">
+                    <div class="module-header">
+                        <h1 class="module-title">Cost Analysis</h1>
+                        <div class="module-actions">
+                            <button class="btn btn-outline">
+                                <i class="fas fa-download"></i> Export
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="charts-grid">
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <h3 class="chart-title">Cost Centers Comparison</h3>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="costCenterChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="module-card">
+                        <div class="module-card-header">
+                            <h3 class="module-card-title">Budget vs Actual</h3>
+                        </div>
+                        <table class="data-table budget-table">
+                            <thead>
+                                <tr>
+                                    <th>Cost Center</th>
+                                    <th>Budget</th>
+                                    <th>Actual</th>
+                                    <th>Variance</th>
+                                </tr>
+                            </thead>
+                            <tbody id="budgetTableBody">
+                                <!-- Populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="module-card">
+                        <div class="module-card-header">
+                            <h3 class="module-card-title">Profitability by Product</h3>
+                        </div>
+                        <table class="data-table profitability-table">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Revenue</th>
+                                    <th>Cost</th>
+                                    <th>Profit</th>
+                                    <th>Margin</th>
+                                </tr>
+                            </thead>
+                            <tbody id="profitabilityTableBody">
+                                <!-- Populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Reports Page -->
+                <div id="reportsPage" class="page">
+                    <div class="module-header">
+                        <h1 class="module-title">Financial Reports</h1>
+                    </div>
+
+                    <div class="report-controls">
+                        <select class="filter-select" id="reportType">
+                            <option value="income">Income Statement (P&L)</option>
+                            <option value="balance">Balance Sheet</option>
+                            <option value="cashflow">Cash Flow Statement</option>
+                        </select>
+                        <div class="date-range">
+                            <label>From:</label>
+                            <input type="date" id="dateFrom">
+                            <label>To:</label>
+                            <input type="date" id="dateTo">
+                        </div>
+                        <button class="btn btn-primary" id="exportBtn">
+                            <i class="fas fa-file-export"></i> Export CSV
+                        </button>
+                    </div>
+
+                    <div class="module-card" id="reportContainer">
+                        <!-- Report content populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Transaction Modal -->
+    <div class="modal-overlay" id="transactionModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">New Journal Entry</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="transactionForm">
+                    <div class="form-group">
+                        <label for="transactionDate">Date</label>
+                        <input type="date" id="transactionDate" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="transactionDescription">Description</label>
+                        <input type="text" id="transactionDescription" class="form-control" placeholder="Enter description" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="debitAccount">Debit Account</label>
+                            <select id="debitAccount" class="form-control" required>
+                                <option value="">Select Account</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="creditAccount">Credit Account</label>
+                            <select id="creditAccount" class="form-control" required>
+                                <option value="">Select Account</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="transactionAmount">Amount</label>
+                        <input type="number" id="transactionAmount" class="form-control" placeholder="Enter amount" min="0.01" step="0.01" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" id="cancelTransaction">Cancel</button>
+                <button class="btn btn-primary" form="transactionForm" type="submit">
+                    <i class="fas fa-save"></i> Save Entry
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Expense Modal (for Quick Add) -->
+    <div class="modal-overlay" id="expenseModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Add Expense</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="expenseForm">
+                    <div class="form-group">
+                        <label>Expense Type</label>
+                        <select class="form-control" id="expenseType">
+                            <option value="COGS">Cost of Goods Sold</option>
+                            <option value="Payroll">Payroll</option>
+                            <option value="Rent">Rent</option>
+                            <option value="Utilities">Utilities</option>
+                            <option value="Marketing">Marketing</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Amount</label>
+                        <input type="number" class="form-control" id="expenseAmount" placeholder="Enter amount" min="0.01" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <input type="text" class="form-control" id="expenseDescription" placeholder="Enter description">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeAllModals()">Cancel</button>
+                <button class="btn btn-primary" onclick="submitExpense()">
+                    <i class="fas fa-plus"></i> Add Expense
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Scripts -->
+    <script src="js/data.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

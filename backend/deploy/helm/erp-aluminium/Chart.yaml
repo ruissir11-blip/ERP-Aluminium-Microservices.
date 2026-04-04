@@ -1,0 +1,13 @@
+apiVersion: v2
+name: erp-aluminium
+description: ERP Aluminium - Backend API Helm Chart
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - erp
+  - aluminium
+  - manufacturing
+maintainers:
+  - name: ERP Team
+    email: dev@erp.local

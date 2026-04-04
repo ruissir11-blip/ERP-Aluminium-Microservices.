@@ -1,0 +1,386 @@
+openapi: 3.0.3
+info:
+  title: BI Dashboards API
+  description: |
+    API for managing BI Dashboards and retrieving analytics data.
+    Provides cross-module analytics from Aluminium, Stock, Maintenance, Quality, and Comptabilité modules.
+  version: 1.0.0
+  contact:
+    name: AluTech ERP Team
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Development server
+  - url: https://api.alutech-erp.com/v1
+    description: Production server
+
+tags:
+  - name: Dashboards
+    description: Dashboard management operations
+  - name: Seed
+    description: Data seeding operations
+
+paths:
+  /bi/dashboards:
+    get:
+      summary: List all dashboards
+      description: Returns a list of all available dashboards
+      tags:
+        - Dashboards
+      responses:
+        '200':
+          description: Successfully retrieved dashboards
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Dashboard'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      summary: Create a new dashboard
+      description: Creates a new dashboard with optional widgets
+      tags:
+        - Dashboards
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DashboardInput'
+      responses:
+        '201':
+          description: Dashboard created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Dashboard'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /bi/dashboards/{id}:
+    get:
+      summary: Get dashboard by ID
+      description: Returns a single dashboard with its widgets
+      tags:
+        - Dashboards
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Dashboard UUID
+      responses:
+        '200':
+          description: Successfully retrieved dashboard
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Dashboard'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    put:
+      summary: Update dashboard
+      description: Updates an existing dashboard
+      tags:
+        - Dashboards
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Dashboard UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DashboardInput'
+      responses:
+        '200':
+          description: Dashboard updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Dashboard'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    delete:
+      summary: Delete dashboard
+      description: Soft deletes a dashboard
+      tags:
+        - Dashboards
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Dashboard UUID
+      responses:
+        '200':
+          description: Dashboard deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Dashboard deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /bi/dashboards/{id}/data:
+    get:
+      summary: Get dashboard with widget data
+      description: Returns dashboard configuration with computed widget data
+      tags:
+        - Dashboards
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Dashboard UUID
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Start date for data filtering (ISO 8601)
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+          description: End date for data filtering (ISO 8601)
+      responses:
+        '200':
+          description: Successfully retrieved dashboard data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/DashboardData'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /bi/seed:
+    post:
+      summary: Seed default dashboards
+      description: Creates default dashboards if none exist
+      tags:
+        - Seed
+      responses:
+        '200':
+          description: Default dashboards created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Default dashboards created successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    Dashboard:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        name:
+          type: string
+          example: "Executive Dashboard"
+        description:
+          type: string
+          nullable: true
+          example: "High-level overview for executives"
+        type:
+          type: string
+          enum: [executive, operations, finance, technical, custom]
+          example: "executive"
+        isDefault:
+          type: boolean
+          example: true
+        isPublic:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    DashboardInput:
+      type: object
+      required:
+        - name
+        - type
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          example: "My Custom Dashboard"
+        description:
+          type: string
+          maxLength: 255
+        type:
+          type: string
+          enum: [executive, operations, finance, technical, custom]
+        isPublic:
+          type: boolean
+          default: true
+
+    WidgetData:
+      type: object
+      properties:
+        widgetId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        type:
+          type: string
+          enum: [kpi_card, line_chart, bar_chart, pie_chart, area_chart, data_table, gauge, heat_map]
+        data:
+          type: object
+          description: Computed widget data
+        config:
+          type: object
+          nullable: true
+
+    DashboardData:
+      type: object
+      properties:
+        dashboard:
+          $ref: '#/components/schemas/Dashboard'
+        widgets:
+          type: array
+          items:
+            $ref: '#/components/schemas/WidgetData'
+
+  responses:
+    Unauthorized:
+      description: Unauthorized - Authentication required
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: Unauthorized
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: Dashboard not found
+
+    BadRequest:
+      description: Bad request - Invalid input
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: Internal server error

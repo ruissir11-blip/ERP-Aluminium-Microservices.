@@ -1,0 +1,214 @@
+@startuml Diagramme de Cas d'Utilisation Général — ERP Aluminium
+
+' ============================================================
+'  CONFIGURATION & STYLE
+' ============================================================
+left to right direction
+skinparam actorStyle awesome
+skinparam shadowing false
+skinparam defaultFontName  Arial
+skinparam defaultFontSize  12
+
+skinparam usecase {
+    BackgroundColor    #FAFAFA
+    BorderColor        #37474F
+    FontColor          #212121
+    StereotypeFontSize 10
+    ArrowColor         #1565C0
+}
+
+skinparam actor {
+    BackgroundColor  #E3F2FD
+    BorderColor      #1565C0
+    FontColor        #0D47A1
+    FontSize         13
+}
+
+skinparam arrow {
+    Color     #546E7A
+    FontColor #1565C0
+    FontSize  10
+}
+
+' ============================================================
+'  ACTEURS (à gauche)
+' ============================================================
+actor "Administrateur"                as Admin
+actor "Dirigeant"                     as Dirigeant
+actor "Gestionnaire\nCommercial"      as Commercial
+actor "Responsable\nProduction"       as RespProduction
+actor "Responsable\nStock"            as RespStock
+actor "Responsable\nMaintenance"      as RespMaintenance
+actor "Responsable\nQualité"          as RespQualite
+actor "Comptable / DAF"              as Comptable
+actor "Système IA"                    as SystemeIA
+
+' ============================================================
+'  CAS D'UTILISATION — Module A : Métier Aluminium
+' ============================================================
+usecase "Gérer les profilés\naluminium"       as UC_PROFILS
+usecase "Gérer les devis"                     as UC_DEVIS
+usecase "Gérer les commandes"                 as UC_COMMANDES
+usecase "Gérer les ordres\nde fabrication"    as UC_OF
+usecase "Gérer les livraisons"                as UC_LIVRAISONS
+usecase "Gérer les factures"                  as UC_FACTURES
+
+' ============================================================
+'  CAS D'UTILISATION — Module B : Stock Avancé
+' ============================================================
+usecase "Gérer le stock\nmulti-entrepôt"      as UC_STOCK
+usecase "Suivre les mouvements\nde stock"     as UC_MOUVEMENTS
+usecase "Gérer les alertes\nde stock"         as UC_ALERTES
+usecase "Gérer les lots\net traçabilité"      as UC_LOTS
+
+' ============================================================
+'  CAS D'UTILISATION — Module C : Maintenance Industrielle
+' ============================================================
+usecase "Gérer le parc\nmachines"             as UC_MACHINES
+usecase "Planifier la maintenance\npréventive" as UC_MAINT_PREV
+usecase "Gérer les pannes\n(correctif)"       as UC_PANNES
+usecase "Gérer les ordres\nde travail"        as UC_OT
+
+' ============================================================
+'  CAS D'UTILISATION — Module D : Contrôle Qualité
+' ============================================================
+usecase "Effectuer les contrôles\nqualité"    as UC_CONTROLE
+usecase "Gérer les\nnon-conformités"          as UC_NC
+usecase "Analyser les\ncauses racines"        as UC_CAUSES
+usecase "Générer les rapports\nqualité"       as UC_RAPPORTS_Q
+
+' ============================================================
+'  CAS D'UTILISATION — Module E : Comptabilité Analytique
+' ============================================================
+usecase "Analyser les coûts\net rentabilité"  as UC_COUTS
+usecase "Consulter les\nKPI financiers"       as UC_KPI_FIN
+
+' ============================================================
+'  CAS D'UTILISATION — Module F : Business Intelligence
+' ============================================================
+usecase "Consulter les\ntableaux de bord"     as UC_DASHBOARD
+usecase "Exporter les rapports\n(PDF, Excel)" as UC_EXPORT
+
+' ============================================================
+'  CAS D'UTILISATION — Module G : Intelligence Artificielle
+' ============================================================
+usecase "Prévoir la demande"                  as UC_PREVISION
+usecase "Anticiper les ruptures\nde stock"    as UC_RUPTURES
+usecase "Optimiser les\napprovisionnements"   as UC_OPTIM
+usecase "Recommander le planning\nde production" as UC_PLANNING
+
+' ============================================================
+'  CAS D'UTILISATION — Administration & Sécurité
+' ============================================================
+usecase "Gérer les utilisateurs"              as UC_USERS
+usecase "Gérer les rôles\net permissions"     as UC_ROLES
+usecase "Consulter\nl'audit trail"            as UC_AUDIT
+
+' ============================================================
+'  CAS D'UTILISATION — Authentification (à droite)
+' ============================================================
+usecase "S'authentifier"                      as UC_AUTH
+
+' ============================================================
+'  RELATIONS : Acteur → Cas d'utilisation
+' ============================================================
+
+' --- Administrateur (accès complet administration) ---
+Admin --> UC_USERS
+Admin --> UC_ROLES
+Admin --> UC_AUDIT
+
+' --- Dirigeant (vision stratégique) ---
+Dirigeant --> UC_DASHBOARD
+Dirigeant --> UC_EXPORT
+Dirigeant --> UC_KPI_FIN
+
+' --- Gestionnaire Commercial (cycle de vente) ---
+Commercial --> UC_PROFILS
+Commercial --> UC_DEVIS
+Commercial --> UC_COMMANDES
+Commercial --> UC_FACTURES
+
+' --- Responsable Production (fabrication & livraison) ---
+RespProduction --> UC_OF
+RespProduction --> UC_LIVRAISONS
+
+' --- Responsable Stock (gestion des stocks) ---
+RespStock --> UC_STOCK
+RespStock --> UC_MOUVEMENTS
+RespStock --> UC_ALERTES
+RespStock --> UC_LOTS
+
+' --- Responsable Maintenance (parc machines) ---
+RespMaintenance --> UC_MACHINES
+RespMaintenance --> UC_MAINT_PREV
+RespMaintenance --> UC_PANNES
+RespMaintenance --> UC_OT
+
+' --- Responsable Qualité (contrôle & conformité) ---
+RespQualite --> UC_CONTROLE
+RespQualite --> UC_NC
+RespQualite --> UC_CAUSES
+RespQualite --> UC_RAPPORTS_Q
+
+' --- Comptable / DAF (finance) ---
+Comptable --> UC_COUTS
+Comptable --> UC_KPI_FIN
+
+' --- Système IA (acteur non-humain) ---
+SystemeIA --> UC_PREVISION
+SystemeIA --> UC_RUPTURES
+SystemeIA --> UC_OPTIM
+SystemeIA --> UC_PLANNING
+
+' ============================================================
+'  RELATIONS <<include>> → S'authentifier
+'  Tous les cas d'utilisation nécessitent l'authentification
+' ============================================================
+
+' — Module A : Métier Aluminium —
+UC_PROFILS     ..> UC_AUTH : <<include>>
+UC_DEVIS       ..> UC_AUTH : <<include>>
+UC_COMMANDES   ..> UC_AUTH : <<include>>
+UC_OF          ..> UC_AUTH : <<include>>
+UC_LIVRAISONS  ..> UC_AUTH : <<include>>
+UC_FACTURES    ..> UC_AUTH : <<include>>
+
+' — Module B : Stock —
+UC_STOCK       ..> UC_AUTH : <<include>>
+UC_MOUVEMENTS  ..> UC_AUTH : <<include>>
+UC_ALERTES     ..> UC_AUTH : <<include>>
+UC_LOTS        ..> UC_AUTH : <<include>>
+
+' — Module C : Maintenance —
+UC_MACHINES    ..> UC_AUTH : <<include>>
+UC_MAINT_PREV  ..> UC_AUTH : <<include>>
+UC_PANNES      ..> UC_AUTH : <<include>>
+UC_OT          ..> UC_AUTH : <<include>>
+
+' — Module D : Qualité —
+UC_CONTROLE    ..> UC_AUTH : <<include>>
+UC_NC          ..> UC_AUTH : <<include>>
+UC_CAUSES      ..> UC_AUTH : <<include>>
+UC_RAPPORTS_Q  ..> UC_AUTH : <<include>>
+
+' — Module E : Comptabilité —
+UC_COUTS       ..> UC_AUTH : <<include>>
+UC_KPI_FIN     ..> UC_AUTH : <<include>>
+
+' — Module F : BI —
+UC_DASHBOARD   ..> UC_AUTH : <<include>>
+UC_EXPORT      ..> UC_AUTH : <<include>>
+
+' — Module G : IA —
+UC_PREVISION   ..> UC_AUTH : <<include>>
+UC_RUPTURES    ..> UC_AUTH : <<include>>
+UC_OPTIM       ..> UC_AUTH : <<include>>
+UC_PLANNING    ..> UC_AUTH : <<include>>
+
+' — Administration —
+UC_USERS       ..> UC_AUTH : <<include>>
+UC_ROLES       ..> UC_AUTH : <<include>>
+UC_AUDIT       ..> UC_AUTH : <<include>>
+
+@enduml

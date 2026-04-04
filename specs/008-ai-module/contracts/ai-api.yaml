@@ -1,0 +1,871 @@
+openapi: 3.0.3
+info:
+  title: ERP Aluminium - AI Module API
+  description: |
+    AI Predictive Module API for ERP Aluminium.
+    Provides demand forecasting, stockout prediction, inventory optimization, and production planning.
+  version: 1.0.0
+  contact:
+    name: ERP Aluminium Team
+
+servers:
+  - url: http://localhost:3000/api/ai
+    description: Development server
+  - url: https://api.erp-aluminium.com/ai
+    description: Production server
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Health
+    description: Health check endpoints
+  - name: Forecast
+    description: Demand forecasting endpoints
+  - name: Stockout
+    description: Stockout prediction endpoints
+  - name: Inventory
+    description: Inventory optimization endpoints
+  - name: Planning
+    description: Production planning endpoints
+  - name: Models
+    description: AI model management endpoints
+
+paths:
+  # ==================== Health ====================
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Check AI module health
+      description: Returns the health status of all AI services
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  # ==================== Forecast ====================
+  /forecast/generate:
+    post:
+      tags:
+        - Forecast
+      summary: Generate demand forecast
+      description: |
+        Generate demand forecast for a product.
+        Supports short-term (1-4 weeks) and medium-term (1-3 months) horizons.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForecastGenerateRequest'
+      responses:
+        '200':
+          description: Forecast generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForecastGenerateResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /forecast/history:
+    get:
+      tags:
+        - Forecast
+      summary: Get forecast history
+      description: Retrieve historical forecasts for analysis
+      parameters:
+        - name: productId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Forecast history retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForecastHistoryResponse'
+
+  /forecast/{productId}:
+    get:
+      tags:
+        - Forecast
+      summary: Get current forecast for product
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: horizon
+          in: query
+          schema:
+            type: integer
+            default: 12
+      responses:
+        '200':
+          description: Current forecast retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForecastResponse'
+
+  /forecast/override:
+    post:
+      tags:
+        - Forecast
+      summary: Override forecast value
+      description: Allow manual override of AI predictions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForecastOverrideRequest'
+      responses:
+        '200':
+          description: Override saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForecastOverrideResponse'
+
+  /forecast/accuracy:
+    get:
+      tags:
+        - Forecast
+      summary: Get forecast accuracy metrics
+      parameters:
+        - name: productId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [week, month, quarter]
+            default: month
+      responses:
+        '200':
+          description: Accuracy metrics retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForecastAccuracyResponse'
+
+  # ==================== Stockout ====================
+  /stockout/risk-list:
+    get:
+      tags:
+        - Stockout
+      summary: Get stockout risk list
+      description: Get all items at risk of stockout
+      parameters:
+        - name: minRiskLevel
+          in: query
+          schema:
+            type: string
+            enum: [LOW, MEDIUM, HIGH, CRITICAL]
+            default: LOW
+        - name: includeAcknowledged
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: warehouseId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        '200':
+          description: Risk list retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockoutRiskListResponse'
+
+  /stockout/item/{itemId}:
+    get:
+      tags:
+        - Stockout
+      summary: Get stockout prediction for item
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Stockout prediction retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockoutPredictionResponse'
+
+  /stockout/refresh:
+    post:
+      tags:
+        - Stockout
+      summary: Refresh stockout predictions
+      description: Manually trigger a refresh of all stockout predictions
+      responses:
+        '202':
+          description: Refresh job started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobResponse'
+
+  /stockout/alerts:
+    get:
+      tags:
+        - Stockout
+      summary: Get active stockout alerts
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [ACTIVE, ACKNOWLEDGED, RESOLVED]
+            default: ACTIVE
+      responses:
+        '200':
+          description: Alerts retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockoutAlertsResponse'
+
+  /stockout/acknowledge:
+    post:
+      tags:
+        - Stockout
+      summary: Acknowledge stockout alert
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcknowledgeRequest'
+      responses:
+        '200':
+          description: Alert acknowledged
+
+  # ==================== Inventory ====================
+  /inventory/optimize/{itemId}:
+    get:
+      tags:
+        - Inventory
+      summary: Get optimization for item
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Optimization retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OptimizationResponse'
+
+  /inventory/optimize-all:
+    post:
+      tags:
+        - Inventory
+      summary: Optimize all inventory items
+      description: Run batch optimization for all stocked items
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchOptimizeRequest'
+      responses:
+        '202':
+          description: Optimization job started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobResponse'
+
+  /inventory/recommendations:
+    get:
+      tags:
+        - Inventory
+      summary: Get reorder recommendations
+      parameters:
+        - name: minSavings
+          in: query
+          schema:
+            type: number
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PENDING, ORDERED, COMPLETED]
+      responses:
+        '200':
+          description: Recommendations retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecommendationsResponse'
+
+  /inventory/savings:
+    get:
+      tags:
+        - Inventory
+      summary: Get expected savings
+      description: Get aggregated expected savings from optimization
+      responses:
+        '200':
+          description: Savings retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavingsResponse'
+
+  # ==================== Planning ====================
+  /planning/optimize:
+    post:
+      tags:
+        - Planning
+      summary: Optimize production schedule
+      description: Run scheduling optimization using genetic algorithm
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleOptimizeRequest'
+      responses:
+        '202':
+          description: Optimization job started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobResponse'
+        '200':
+          description: Optimization completed (for small datasets)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleResponse'
+
+  /planning/conflicts:
+    get:
+      tags:
+        - Planning
+      summary: Get production conflicts
+      parameters:
+        - name: scheduleId
+          in: query
+          schema:
+            type: string
+          format: uuid
+        - name: severity
+          in: query
+          schema:
+            type: string
+            enum: [LOW, MEDIUM, HIGH, CRITICAL]
+      responses:
+        '200':
+          description: Conflicts retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictsResponse'
+
+  /planning/capacity:
+    get:
+      tags:
+        - Planning
+      summary: Get capacity forecast
+      description: Get production capacity forecast for upcoming period
+      parameters:
+        - name: startDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: machineId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Capacity forecast retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CapacityResponse'
+
+  /planning/bottlenecks:
+    get:
+      tags:
+        - Planning
+      summary: Get bottleneck analysis
+      description: Identify bottleneck resources in production
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            default: week
+      responses:
+        '200':
+          description: Bottlenecks identified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BottlenecksResponse'
+
+  # ==================== Models ====================
+  /models:
+    get:
+      tags:
+        - Models
+      summary: List AI models
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [FORECASTING, STOCKOUT, INVENTORY_OPT, PRODUCTION_SCHEDULING]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [TRAINING, DEPLOYED, ARCHIVED, FAILED]
+      responses:
+        '200':
+          description: Models listed
+
+  /models/{modelId}:
+    get:
+      tags:
+        - Models
+      summary: Get model details
+      parameters:
+        - name: modelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Model details retrieved
+
+  /models/{modelId}/retrain:
+    post:
+      tags:
+        - Models
+      summary: Retrain model
+      description: Trigger model retraining
+      parameters:
+        - name: modelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '202':
+          description: Retraining job started
+
+# ==================== Components ====================
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        pythonConnected:
+          type: boolean
+        modelsLoaded:
+          type: boolean
+        databaseConnected:
+          type: boolean
+
+    ForecastGenerateRequest:
+      type: object
+      required:
+        - productId
+        - horizon
+      properties:
+        productId:
+          type: string
+          format: uuid
+        horizon:
+          type: integer
+          minimum: 1
+          maximum: 52
+        includeConfidence:
+          type: boolean
+          default: true
+
+    ForecastGenerateResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        forecastId:
+          type: string
+          format: uuid
+        forecasts:
+          type: array
+          items:
+            $ref: '#/components/schemas/ForecastItem'
+
+    ForecastItem:
+      type: object
+      properties:
+        targetDate:
+          type: string
+          format: date
+        predictedQuantity:
+          type: number
+        confidence95:
+          $ref: '#/components/schemas/ConfidenceInterval'
+        confidence80:
+          $ref: '#/components/schemas/ConfidenceInterval'
+        trend:
+          type: string
+          enum: [INCREASING, STABLE, DECREASING]
+
+    ConfidenceInterval:
+      type: object
+      properties:
+        lower:
+          type: number
+        upper:
+          type: number
+
+    ForecastHistoryResponse:
+      type: object
+      properties:
+        forecasts:
+          type: array
+          items:
+            $ref: '#/components/schemas/ForecastItem'
+        total:
+          type: integer
+
+    ForecastResponse:
+      type: object
+      properties:
+        productId:
+          type: string
+          format: uuid
+        productName:
+          type: string
+        forecasts:
+          type: array
+          items:
+            $ref: '#/components/schemas/ForecastItem'
+        modelVersion:
+          type: string
+
+    ForecastOverrideRequest:
+      type: object
+      required:
+        - forecastId
+        - overrideQuantity
+      properties:
+        forecastId:
+          type: string
+          format: uuid
+        overrideQuantity:
+          type: number
+        reason:
+          type: string
+
+    ForecastOverrideResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        overrideId:
+          type: string
+          format: uuid
+
+    ForecastAccuracyResponse:
+      type: object
+      properties:
+        mape:
+          type: number
+        rmse:
+          type: number
+        accuracy:
+          type: number
+
+    StockoutRiskListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/StockoutRiskItem'
+        total:
+          type: integer
+
+    StockoutRiskItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        inventoryItemId:
+          type: string
+          format: uuid
+        productReference:
+          type: string
+        currentStock:
+          type: number
+        daysToStockout:
+          type: number
+        riskLevel:
+          type: string
+          enum: [CRITICAL, HIGH, MEDIUM, LOW]
+        recommendedReorderQty:
+          type: number
+        recommendedReorderDate:
+          type: string
+          format: date
+        isAcknowledged:
+          type: boolean
+
+    StockoutPredictionResponse:
+      type: object
+      properties:
+        predictionId:
+          type: string
+          format: uuid
+        daysToStockout:
+          type: number
+        riskLevel:
+          type: string
+          currentStock:
+          type: number
+        predictedConsumption:
+          type: number
+        pendingIncoming:
+          type: number
+
+    JobResponse:
+      type: object
+      properties:
+        jobId:
+          type: string
+          format: uuid
+        status:
+          type: string
+
+    StockoutAlertsResponse:
+      type: object
+      properties:
+        alerts:
+          type: array
+          items:
+            type: object
+
+    AcknowledgeRequest:
+      type: object
+      required:
+        - predictionId
+      properties:
+        predictionId:
+          type: string
+          format: uuid
+
+    OptimizationResponse:
+      type: object
+      properties:
+        itemId:
+          type: string
+          format: uuid
+        eoq:
+          type: number
+        reorderPoint:
+          type: number
+        safetyStock:
+          type: number
+        expectedAnnualSavings:
+          type: number
+        improvementPercent:
+          type: number
+
+    BatchOptimizeRequest:
+      type: object
+      properties:
+        itemIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        priority:
+          type: string
+          enum: [HIGH, NORMAL, LOW]
+
+    RecommendationsResponse:
+      type: object
+      properties:
+        recommendations:
+          type: array
+          items:
+            type: object
+
+    SavingsResponse:
+      type: object
+      properties:
+        totalExpectedSavings:
+          type: number
+        itemsOptimized:
+          type: integer
+        averageSavingsPercent:
+          type: number
+
+    ScheduleOptimizeRequest:
+      type: object
+      required:
+        - startDate
+        - endDate
+      properties:
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        objectives:
+          type: array
+          items:
+            type: string
+        constraints:
+          type: object
+
+    ScheduleResponse:
+      type: object
+      properties:
+        scheduleId:
+          type: string
+          format: uuid
+        makespan:
+          type: number
+        ordersScheduled:
+          type: integer
+        conflicts:
+          type: integer
+
+    ConflictsResponse:
+      type: object
+      properties:
+        conflicts:
+          type: array
+          items:
+            type: object
+
+    CapacityResponse:
+      type: object
+      properties:
+        period:
+          type: string
+        utilization:
+          type: array
+          items:
+            type: object
+
+    BottlenecksResponse:
+      type: object
+      properties:
+        bottlenecks:
+          type: array
+          items:
+            type: object
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

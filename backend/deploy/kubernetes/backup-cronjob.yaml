@@ -1,0 +1,116 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: erp-backup
+  namespace: production
+spec:
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: backup
+            image: postgres:15-alpine
+            env:
+            - name: PGHOST
+              valueFrom:
+                secretKeyRef:
+                  name: erp-secrets
+                  key: database-url
+                  optional: true
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: erp-backup-secrets
+                  key: aws-access-key
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: erp-backup-secrets
+                  key: aws-secret-key
+            - name: AWS_REGION
+              value: "us-east-1"
+            - name: S3_BUCKET
+              value: "erp-aluminium-backups"
+            command:
+            - /bin/sh
+            - -c
+            - |
+              # Create backup
+              DATE=$(date +%Y%m%d_%H%M%S)
+              FILENAME="erp_backup_${DATE}.sql.gz"
+              
+              # Backup database
+              pg_dump -U postgres erp_aluminium | gzip > /tmp/${FILENAME}
+              
+              # Upload to S3
+              aws s3 cp /tmp/${FILENAME} s3://${S3_BUCKET}/daily/${FILENAME}
+              
+              # Clean up old backups (keep 30 days)
+              aws s3 ls s3://${S3_BUCKET}/daily/ | while read -r line; do
+                createDate=$(echo "$line" | awk '{print $1 " " $2 " " $3}')
+                createDate=$(date -d "$createDate" +%s)
+                olderThan=$(date -d "30 days ago" +%s)
+                if [ $createDate -lt $olderThan ]; then
+                  fileName=$(echo "$line" | awk '{print $4}')
+                  aws s3 rm s3://${S3_BUCKET}/daily/${fileName}
+                fi
+              done
+              
+              # Record backup in database
+              psql -U postgres -d erp_aluminium -c "INSERT INTO backup_record (backup_type, status, file_path, file_size_bytes, database_name, started_at, completed_at) VALUES ('FULL', 'COMPLETED', 's3://${S3_BUCKET}/daily/${FILENAME}', $(stat -f%z /tmp/${FILENAME}), 'erp_aluminium', NOW(), NOW())"
+              
+              # Clean up
+              rm -f /tmp/${FILENAME}
+            volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          volumes:
+          - name: tmp
+            emptyDir: {}
+          restartPolicy: OnFailure
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: erp-backup-weekly
+  namespace: production
+spec:
+  schedule: "0 3 * * 0"  # Weekly on Sunday at 3 AM
+  successfulJobsHistoryLimit: 4
+  failedJobsHistoryLimit: 4
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: backup
+            image: postgres:15-alpine
+            env:
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: erp-backup-secrets
+                  key: aws-access-key
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: erp-backup-secrets
+                  key: aws-secret-key
+            - name: AWS_REGION
+              value: "us-east-1"
+            - name: S3_BUCKET
+              value: "erp-aluminium-backups"
+            command:
+            - /bin/sh
+            - -c
+            - |
+              DATE=$(date +%Y%m%d)
+              FILENAME="erp_weekly_backup_${DATE}.sql.gz"
+              pg_dump -U postgres erp_aluminium | gzip > /tmp/${FILENAME}
+              aws s3 cp /tmp/${FILENAME} s3://${S3_BUCKET}/weekly/${FILENAME}
+              rm -f /tmp/${FILENAME}
+          restartPolicy: OnFailure

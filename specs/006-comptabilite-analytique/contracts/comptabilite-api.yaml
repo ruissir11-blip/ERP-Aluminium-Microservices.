@@ -1,0 +1,415 @@
+openapi: 3.0.0
+info:
+  title: Analytical Accounting API
+  description: API for cost analysis, profitability tracking, and financial KPIs
+  version: 1.0.0
+  contact:
+    name: ERP Aluminium Team
+
+servers:
+  - url: http://localhost:3000/api
+    description: Development server
+
+tags:
+  - name: Cost Components
+    description: Manage cost components (material, labor, overhead)
+  - name: Product Costs
+    description: Product cost calculations
+  - name: Order Costing
+    description: Order margin and profitability
+  - name: Customer Profitability
+    description: Customer-level profitability analysis
+  - name: Commercial Performance
+    description: Sales rep performance tracking
+  - name: Financial KPIs
+    description: Dashboard KPIs and metrics
+  - name: ROI Analysis
+    description: Equipment investment returns
+
+paths:
+  /comptabilite/cost-components:
+    get:
+      tags: [Cost Components]
+      summary: List all cost components
+      parameters:
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum: [material, labor, overhead]
+        - in: query
+          name: is_active
+          schema:
+            type: boolean
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: List of cost components
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CostComponentList'
+    post:
+      tags: [Cost Components]
+      summary: Create a cost component
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CostComponentInput'
+      responses:
+        '201':
+          description: Cost component created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CostComponent'
+
+  /comptabilite/cost-components/{id}:
+    put:
+      tags: [Cost Components]
+      summary: Update a cost component
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CostComponentInput'
+      responses:
+        '200':
+          description: Cost component updated
+    delete:
+      tags: [Cost Components]
+      summary: Soft delete a cost component
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Cost component deleted
+
+  /comptabilite/product-costs:
+    get:
+      tags: [Product Costs]
+      summary: List all product costs
+      parameters:
+        - in: query
+          name: sort_by
+          schema:
+            type: string
+            enum: [total_cost, material_cost, labor_cost, overhead_cost]
+        - in: query
+          name: order
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: List of product costs
+
+  /comptabilite/product-costs/{profileId}:
+    get:
+      tags: [Product Costs]
+      summary: Get product cost by profile ID
+      parameters:
+        - in: path
+          name: profileId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Product cost details
+
+  /comptabilite/costs/recalculate:
+    post:
+      tags: [Product Costs]
+      summary: Trigger cost recalculation for all products
+      responses:
+        '202':
+          description: Recalculation started
+
+  /comptabilite/orders/{orderId}/costing:
+    get:
+      tags: [Order Costing]
+      summary: Get costing for a specific order
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Order costing details
+
+  /comptabilite/orders/{orderId}/recalculate-costing:
+    post:
+      tags: [Order Costing]
+      summary: Recalculate costing for an order
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Costing recalculated
+
+  /comptabilite/customers/{customerId}/profitability:
+    get:
+      tags: [Customer Profitability]
+      summary: Get profitability for a customer
+      parameters:
+        - in: path
+          name: customerId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Customer profitability
+
+  /comptabilite/customers/profitability:
+    get:
+      tags: [Customer Profitability]
+      summary: List all customer profitability
+      parameters:
+        - in: query
+          name: min_margin
+          schema:
+            type: number
+        - in: query
+          name: sort_by
+          schema:
+            type: string
+            enum: [margin_percent, total_revenue, total_margin]
+        - in: query
+          name: order
+          schema:
+            type: string
+            enum: [asc, desc]
+      responses:
+        '200':
+          description: List of customer profitability
+
+  /comptabilite/commercials/{commercialId}/performance:
+    get:
+      tags: [Commercial Performance]
+      summary: Get performance for a commercial
+      parameters:
+        - in: path
+          name: commercialId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: period
+          schema:
+            type: string
+            enum: [month, quarter, year]
+        - in: query
+          name: start_date
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: end_date
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Commercial performance
+
+  /comptabilite/commercials/leaderboard:
+    get:
+      tags: [Commercial Performance]
+      summary: Get commercial leaderboard
+      parameters:
+        - in: query
+          name: period
+          schema:
+            type: string
+            enum: [month, quarter, year]
+        - in: query
+          name: sort_by
+          schema:
+            type: string
+            enum: [revenue, margin, conversion_rate, achievement_pct]
+      responses:
+        '200':
+          description: Leaderboard data
+
+  /comptabilite/kpis/dashboard:
+    get:
+      tags: [Financial KPIs]
+      summary: Get financial dashboard KPIs
+      responses:
+        '200':
+          description: Dashboard KPIs
+
+  /comptabilite/kpis/dso:
+    get:
+      tags: [Financial KPIs]
+      summary: Get DSO metrics
+      parameters:
+        - in: query
+          name: period
+          schema:
+            type: string
+            enum: [month, quarter, year]
+      responses:
+        '200':
+          description: DSO metrics
+
+  /comptabilite/kpis/aging:
+    get:
+      tags: [Financial KPIs]
+      summary: Get receivable aging
+      parameters:
+        - in: query
+          name: period
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Receivable aging
+
+  /comptabilite/roi/{equipmentId}:
+    get:
+      tags: [ROI Analysis]
+      summary: Get ROI for equipment
+      parameters:
+        - in: path
+          name: equipmentId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Equipment ROI
+
+  /comptabilite/roi/calculate:
+    post:
+      tags: [ROI Analysis]
+      summary: Calculate ROI for investment scenario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ROIInput'
+      responses:
+        '200':
+          description: ROI calculation result
+
+components:
+  schemas:
+    CostComponent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          type: string
+          enum: [material, labor, overhead]
+        rate:
+          type: number
+        unit:
+          type: string
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CostComponentInput:
+      type: object
+      required:
+        - name
+        - type
+        - rate
+        - unit
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [material, labor, overhead]
+        rate:
+          type: number
+        unit:
+          type: string
+
+    CostComponentList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CostComponent'
+        pagination:
+          type: object
+          properties:
+            page:
+              type: integer
+            limit:
+              type: integer
+            total:
+              type: integer
+
+    ROIInput:
+      type: object
+      required:
+        - investment_cost
+        - annual_benefit
+      properties:
+        investment_cost:
+          type: number

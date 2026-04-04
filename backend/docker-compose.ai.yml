@@ -1,0 +1,108 @@
+version: '3.8'
+
+services:
+  # PostgreSQL with TimescaleDB
+  postgres-timescale:
+    image: timescale/timescaledb:latest-pg16
+    container_name: erp-postgres-timescale
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=erp_aluminium
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-timescale-data:/var/lib/postgresql/data
+    networks:
+      - erp-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Python AI/ML Service
+  python-ai:
+    build:
+      context: ./python-ai
+      dockerfile: Dockerfile
+    container_name: erp-python-ai
+    ports:
+      - "5000:5000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres-timescale:5432/erp_aluminium
+      - REDIS_URL=redis://redis-ai:6379/1
+      - MLFLOW_TRACKING_URI=http://mlflow:5001
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      postgres-timescale:
+        condition: service_healthy
+      redis-ai:
+        condition: service_started
+      mlflow:
+        condition: service_started
+    volumes:
+      - ./python-ai:/app
+      - ai-models:/app/models
+    networks:
+      - erp-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # MLflow Model Registry
+  mlflow:
+    image: mlflow/mlflow:latest
+    container_name: erp-mlflow
+    ports:
+      - "5001:5001"
+    environment:
+      - MLFLOW_BACKEND_STORE=postgresql://postgres:postgres@postgres-timescale:5432/mlflow
+      - MLFLOW_ARTIFACT_ROOT=/mlflow/artifacts
+    volumes:
+      - mlflow-data:/mlflow
+    networks:
+      - erp-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis for job queue and caching
+  redis-ai:
+    image: redis:7-alpine
+    container_name: erp-redis-ai
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-ai-data:/data
+    networks:
+      - erp-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+networks:
+  erp-network:
+    driver: bridge
+
+volumes:
+  postgres-timescale-data:
+    driver: local
+  ai-models:
+    driver: local
+  mlflow-data:
+    driver: local
+  redis-ai-data:
+    driver: local

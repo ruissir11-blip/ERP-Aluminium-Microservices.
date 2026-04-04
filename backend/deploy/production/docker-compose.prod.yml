@@ -1,0 +1,147 @@
+version: '3.8'
+
+services:
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: erp-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+      - python-ai
+    networks:
+      - erp-network
+    restart: unless-stopped
+
+  # Backend API
+  backend:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    container_name: erp-backend
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=redis://redis:6379/0
+      - AI_SERVICE_URL=http://python-ai:5000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - erp-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+  # PostgreSQL with TimescaleDB
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    container_name: erp-postgres
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - erp-network
+    restart: unless-stopped
+    command: 
+      - "-c"
+      - "shared_preload_libraries=timescaledb"
+      - "-c"
+      - "timescaledb.max_background_workers=4"
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: erp-redis
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    networks:
+      - erp-network
+    restart: unless-stopped
+
+  # Python AI Service
+  python-ai:
+    build:
+      context: ../python-ai
+      dockerfile: Dockerfile
+    container_name: erp-python-ai
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://redis:6379/1
+      - MLFLOW_TRACKING_URI=http://mlflow:5001
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      mlflow:
+        condition: service_started
+    networks:
+      - erp-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          cpus: '2'
+          memory: 4G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  # MLflow
+  mlflow:
+    image: mlflow/mlflow:latest
+    container_name: erp-mlflow
+    environment:
+      - MLFLOW_BACKEND_STORE=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/mlflow
+      - MLFLOW_ARTIFACT_ROOT=/mlflow/artifacts
+    volumes:
+      - mlflow-data:/mlflow
+    networks:
+      - erp-network
+    restart: unless-stopped
+
+networks:
+  erp-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
+  mlflow-data:
+
+# Health monitoring
+x-healthcheck: &healthcheck
+  test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 40s
