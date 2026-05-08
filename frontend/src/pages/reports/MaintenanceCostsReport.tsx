@@ -145,7 +145,7 @@ const MaintenanceCostsReport: React.FC = () => {
       dataIndex: 'scheduled_date',
       key: 'scheduled_date',
       width: 120,
-      render: (date: string) => new Date(date).toLocaleDateString('fr-FR'),
+      render: (date: string) => new Date(date).toLocaleDateString('fr-TN'),
     },
     {
       title: 'Heures main d\'œuvre',
@@ -161,7 +161,7 @@ const MaintenanceCostsReport: React.FC = () => {
       key: 'parts_cost',
       width: 120,
       align: 'right' as const,
-      render: (cost: number) => cost ? `${cost.toLocaleString()} €` : '-',
+      render: (cost: number) => cost ? `${cost.toLocaleString('fr-TN', { minimumFractionDigits: 3 })} DT` : '-',
     },
     {
       title: 'Coût total',
@@ -212,7 +212,7 @@ const MaintenanceCostsReport: React.FC = () => {
                     value={summary?.totalCost || 0}
                     precision={2}
                     prefix={<DollarOutlined />}
-                    suffix="€"
+                    suffix="DT"
                   />
                 </Card>
               </Col>
@@ -223,7 +223,7 @@ const MaintenanceCostsReport: React.FC = () => {
                     value={summary?.preventiveCost || 0}
                     precision={2}
                     valueStyle={{ color: '#1890ff' }}
-                    suffix="€"
+                    suffix="DT"
                   />
                 </Card>
               </Col>
@@ -234,7 +234,7 @@ const MaintenanceCostsReport: React.FC = () => {
                     value={summary?.correctiveCost || 0}
                     precision={2}
                     valueStyle={{ color: '#ff4d4f' }}
-                    suffix="€"
+                    suffix="DT"
                   />
                 </Card>
               </Col>
@@ -286,7 +286,7 @@ const MaintenanceCostsReport: React.FC = () => {
                     return (
                       <Table.Summary.Row>
                         <Table.Summary.Cell index={0} colSpan={7}><strong>Total de la page</strong></Table.Summary.Cell>
-                        <Table.Summary.Cell index={7} align="right"><strong>{totalCost.toLocaleString()} €</strong></Table.Summary.Cell>
+                        <Table.Summary.Cell index={7} align="right"><strong>{totalCost.toLocaleString('fr-TN', { minimumFractionDigits: 3 })} DT</strong></Table.Summary.Cell>
                       </Table.Summary.Row>
                     );
                   }}

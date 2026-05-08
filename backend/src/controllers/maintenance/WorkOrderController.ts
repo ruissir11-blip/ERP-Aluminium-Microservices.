@@ -93,7 +93,7 @@ export class WorkOrderController {
    */
   async createWorkOrder(req: Request, res: Response): Promise<void> {
     try {
-      const { machineId, maintenancePlanId, type, priority, title, description, scheduledDate, scheduledStartTime, scheduledEndTime, assignedTo, createdBy } = req.body;
+      const { machineId, type, priority, title, description, scheduledDate, scheduledStartTime, scheduledEndTime, assignedTo, createdBy } = req.body;
 
       // Basic validation
       if (!machineId || !isValidUUID(machineId)) {
@@ -113,7 +113,6 @@ export class WorkOrderController {
 
       const workOrder = await this.workOrderService.create({
         machineId,
-        maintenancePlanId,
         type,
         priority,
         title,

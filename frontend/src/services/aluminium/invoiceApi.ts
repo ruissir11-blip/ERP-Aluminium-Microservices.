@@ -6,6 +6,7 @@ const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 const api = axios.create({
   baseURL: API_URL,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -27,8 +28,8 @@ export const invoiceService = {
   getById: (id: string) =>
     api.get<ApiResponse<Invoice>>(`/invoices/${id}`),
 
-  create: (invoice: Partial<Invoice>) =>
-    api.post<ApiResponse<Invoice>>('/invoices', invoice),
+  createFromOrder: (data: { orderId: string; customerId: string; invoiceDate?: string; dueDate?: string; vatRate?: number; notes?: string }) =>
+    api.post<ApiResponse<Invoice>>('/invoices/from-order', data),
 
   update: (id: string, invoice: Partial<Invoice>) =>
     api.put<ApiResponse<Invoice>>(`/invoices/${id}`, invoice),

@@ -217,13 +217,13 @@ export const attendanceApi = {
     return response.data.data;
   },
 
-  checkIn: async (notes?: string): Promise<Attendance> => {
-    const response = await hrApi.post('/attendances/check-in', { notes });
+  checkIn: async (employeeId: string, notes?: string): Promise<Attendance> => {
+    const response = await hrApi.post('/attendances/check-in', { employeeId, notes });
     return response.data.data;
   },
 
-  checkOut: async (notes?: string): Promise<Attendance> => {
-    const response = await hrApi.post('/attendances/check-out', { notes });
+  checkOut: async (employeeId: string, notes?: string): Promise<Attendance> => {
+    const response = await hrApi.post('/attendances/check-out', { employeeId, notes });
     return response.data.data;
   },
 

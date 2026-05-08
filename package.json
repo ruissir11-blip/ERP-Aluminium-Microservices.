@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "erp-rh-microservice": "file:microservice-rh",
+    "finish": "^0.6.3",
+    "in": "^0.19.0"
+  }
+}

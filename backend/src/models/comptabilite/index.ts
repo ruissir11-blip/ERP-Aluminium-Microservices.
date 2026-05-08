@@ -1,4 +1,3 @@
-export { CostComponent, CostComponentType } from './CostComponent';
 export { ProductCost } from './ProductCost';
 export { OrderCosting } from './OrderCosting';
 export { CustomerProfitability } from './CustomerProfitability';

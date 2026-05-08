@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Plus, Search, Filter, ArrowUpDown, AlertTriangle, Warehouse, X } from 'lucide-react';
+import { message } from 'antd';
 import Layout from '../components/common/Layout';
 import { stockService, profileService, warehouseService } from '../services/api';
 import { StockItem, MovementType, AluminumProfile, Warehouse as WarehouseType } from '../types';
@@ -137,8 +138,20 @@ const StockManagement: React.FC = () => {
         notes: '',
       });
       fetchStock();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating movement:', error);
+      // Handle both error formats: simple string and structured error object
+      let errorMessage = error.message || 'Erreur inconnue';
+      if (error.response?.data) {
+        if (error.response.data.error?.message) {
+          errorMessage = error.response.data.error.message;
+        } else if (error.response.data.details) {
+          errorMessage = error.response.data.details;
+        } else if (typeof error.response.data.error === 'string') {
+          errorMessage = error.response.data.error;
+        }
+      }
+      message.error(`Erreur lors de la création du mouvement: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }

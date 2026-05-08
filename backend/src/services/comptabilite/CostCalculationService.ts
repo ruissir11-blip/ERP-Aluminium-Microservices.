@@ -1,6 +1,5 @@
 import { Repository, DataSource } from 'typeorm';
 import { AppDataSource } from '../../config/database';
-import { CostComponent, CostComponentType } from '../../models/comptabilite/CostComponent';
 import { ProductCost } from '../../models/comptabilite/ProductCost';
 import { AluminumProfile } from '../../models/aluminium/AluminumProfile';
 import {
@@ -26,75 +25,57 @@ export interface ProductCostResult {
 }
 
 export class CostCalculationService {
-  private costComponentRepository: Repository<CostComponent>;
   private productCostRepository: Repository<ProductCost>;
   private profileRepository: Repository<AluminumProfile>;
 
   constructor(dataSource?: DataSource) {
     const ds = dataSource || AppDataSource;
-    this.costComponentRepository = ds.getRepository(CostComponent);
     this.productCostRepository = ds.getRepository(ProductCost);
     this.profileRepository = ds.getRepository(AluminumProfile);
   }
 
   /**
-   * Calculate product cost based on cost components
+   * Calculate product cost based on default rates (since cost components removed)
    */
   async calculateProductCost(input: CalculateProductCostInput): Promise<ProductCostResult> {
     const { profileId, materialQuantity, laborHours, overheadAllocationMethod = 'labor_hours' } = input;
 
-    // Get active cost components
-    const costComponents = await this.costComponentRepository.find({
-      where: { isActive: true },
-    });
-
-    const materialComponent = costComponents.find(
-      (c) => c.type === CostComponentType.MATERIAL
-    );
-    const laborComponent = costComponents.find(
-      (c) => c.type === CostComponentType.LABOR
-    );
-    const overheadComponent = costComponents.find(
-      (c) => c.type === CostComponentType.OVERHEAD
-    );
+    // Default rates (these would typically come from configuration)
+    const DEFAULT_MATERIAL_RATE = 10.0; // DT per unit
+    const DEFAULT_LABOR_RATE = 50.0; // DT per hour
+    const DEFAULT_OVERHEAD_RATE = 20.0; // DT per hour or % of material cost
 
     // Calculate material cost
     let materialCost = 0;
-    if (materialComponent) {
-      materialCost = Number(
-        multiply(materialQuantity, materialComponent.rate).toFixed(2)
-      );
-    }
+    materialCost = Number(
+      multiply(materialQuantity, DEFAULT_MATERIAL_RATE).toFixed(2)
+    );
 
     // Calculate labor cost
     let laborCost = 0;
-    if (laborComponent) {
-      laborCost = Number(
-        multiply(laborHours, laborComponent.rate).toFixed(2)
-      );
-    }
+    laborCost = Number(
+      multiply(laborHours, DEFAULT_LABOR_RATE).toFixed(2)
+    );
 
-    // Calculate overhead cost using ABC method
+    // Calculate overhead cost
     let overheadCost = 0;
-    if (overheadComponent) {
-      switch (overheadAllocationMethod) {
-        case 'labor_hours':
-          overheadCost = Number(
-            multiply(laborHours, overheadComponent.rate).toFixed(2)
-          );
-          break;
-        case 'material_cost':
-          overheadCost = Number(
-            multiply(materialCost, overheadComponent.rate).toFixed(2)
-          );
-          break;
-        case 'machine_hours':
-          // For now, use labor hours as proxy for machine hours
-          overheadCost = Number(
-            multiply(laborHours, overheadComponent.rate).toFixed(2)
-          );
-          break;
-      }
+    switch (overheadAllocationMethod) {
+      case 'labor_hours':
+        overheadCost = Number(
+          multiply(laborHours, DEFAULT_OVERHEAD_RATE).toFixed(2)
+        );
+        break;
+      case 'material_cost':
+        overheadCost = Number(
+          multiply(materialCost, DEFAULT_OVERHEAD_RATE / 100).toFixed(2) // Assuming percentage
+        );
+        break;
+      case 'machine_hours':
+        // For now, use labor hours as proxy for machine hours
+        overheadCost = Number(
+          multiply(laborHours, DEFAULT_OVERHEAD_RATE).toFixed(2)
+        );
+        break;
     }
 
     // Calculate total cost

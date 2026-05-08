@@ -71,6 +71,7 @@ export class AuthService {
   private passwordResetTokenRepository: Repository<PasswordResetToken>;
 
   constructor() {
+    // Get repositories - they will throw if database is not initialized
     this.userRepository = AppDataSource.getRepository(User);
     this.roleRepository = AppDataSource.getRepository(Role);
     this.sessionRepository = AppDataSource.getRepository(Session);

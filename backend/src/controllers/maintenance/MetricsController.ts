@@ -178,41 +178,6 @@ export class MetricsController {
   }
 
   /**
-   * GET /api/v1/maintenance/metrics/costs/:machineId
-   * Get maintenance cost report for a machine
-   */
-  async getCostReport(req: Request, res: Response): Promise<void> {
-    try {
-      const { machineId } = req.params;
-      const { startDate, endDate } = req.query;
-
-      if (!isValidUUID(machineId)) {
-        res.status(400).json({ error: 'Invalid machine ID format' });
-        return;
-      }
-
-      if (!startDate || !endDate) {
-        res.status(400).json({ error: 'startDate and endDate are required' });
-        return;
-      }
-
-      const report = await this.metricsService.getMaintenanceCostReport(
-        machineId,
-        new Date(startDate as string),
-        new Date(endDate as string)
-      );
-
-      res.json({ data: report });
-    } catch (error) {
-      if ((error as Error).message === 'Machine not found') {
-        res.status(404).json({ error: (error as Error).message });
-        return;
-      }
-      res.status(500).json({ error: 'Failed to fetch cost report', details: (error as Error).message });
-    }
-  }
-
-  /**
    * GET /api/v1/maintenance/metrics/ratio
    * Get preventive vs corrective ratio
    */

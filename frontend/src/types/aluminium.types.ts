@@ -100,7 +100,9 @@ export interface CustomerOrder {
   id: string;
   orderNumber: string;
   quoteId?: string;
+  quote?: Quote;
   customerId: string;
+  customer?: Customer;
   status: OrderStatus;
   total: number;
   deliveryDate?: string;
@@ -120,6 +122,7 @@ export interface Invoice {
   id: string;
   invoiceNumber: string;
   orderId?: string;
+  order?: CustomerOrder;
   customerId: string;
   customer?: Customer;
   status: InvoiceStatus;

@@ -3,8 +3,6 @@ import {
   Machine,
   MachineStatus,
   MachineDocument,
-  MaintenancePlan,
-  MaintenanceFrequency,
   WorkOrder,
   WorkOrderType,
   WorkOrderStatus,
@@ -14,7 +12,6 @@ import {
   MTBFMetrics,
   MTTRMetrics,
   MaintenanceKPIs,
-  MaintenanceCostReport,
   PreventiveCorrectiveRatio,
 } from '../../types/maintenance.types';
 
@@ -60,7 +57,6 @@ export interface WorkOrderFilters {
 
 export interface CreateWorkOrderInput {
   machineId: string;
-  maintenancePlanId?: string;
   type: WorkOrderType;
   priority?: WorkOrderPriority;
   title: string;
@@ -93,24 +89,6 @@ export interface ReportBreakdownInput {
   description?: string;
   severity: BreakdownSeverity;
   symptoms?: string;
-}
-
-// Maintenance Plan API
-export interface MaintenancePlanFilters {
-  machineId?: string;
-  isActive?: boolean;
-  upcoming?: boolean;
-}
-
-export interface CreateMaintenancePlanInput {
-  machineId: string;
-  description: string;
-  taskType: string;
-  frequency: MaintenanceFrequency;
-  frequencyDays?: number;
-  estimatedDurationHours?: number;
-  nextDueDate?: string;
-  assignedTechnicianId?: string;
 }
 
 // Metrics API
@@ -236,48 +214,6 @@ export const workOrderApi = {
   },
 };
 
-export const maintenancePlanApi = {
-  getAll: (filters: MaintenancePlanFilters = {}) => {
-    const params = new URLSearchParams();
-    if (filters.machineId) params.append('machineId', filters.machineId);
-    if (filters.isActive !== undefined) params.append('isActive', String(filters.isActive));
-    if (filters.upcoming) params.append('upcoming', 'true');
-    return api.get<{ data: MaintenancePlan[] }>(`/maintenance/plans?${params.toString()}`);
-  },
-
-  getDue: (days: number = 30) => {
-    return api.get<{ data: MaintenancePlan[] }>(`/maintenance/plans/due?days=${days}`);
-  },
-
-  getById: (id: string) => {
-    return api.get<{ data: MaintenancePlan }>(`/maintenance/plans/${id}`);
-  },
-
-  create: (input: CreateMaintenancePlanInput) => {
-    return api.post<{ data: MaintenancePlan }>('/maintenance/plans', input);
-  },
-
-  update: (id: string, input: Partial<CreateMaintenancePlanInput>) => {
-    return api.put<{ data: MaintenancePlan }>(`/maintenance/plans/${id}`, input);
-  },
-
-  deactivate: (id: string) => {
-    return api.post<{ data: MaintenancePlan }>(`/maintenance/plans/${id}/deactivate`);
-  },
-
-  reactivate: (id: string) => {
-    return api.post<{ data: MaintenancePlan }>(`/maintenance/plans/${id}/reactivate`);
-  },
-
-  complete: (id: string, completedDate?: string) => {
-    return api.post<{ data: MaintenancePlan }>(`/maintenance/plans/${id}/complete`, { completedDate });
-  },
-
-  generateWorkOrders: () => {
-    return api.post<{ message: string; data: WorkOrder[] }>('/maintenance/plans/generate-work-orders');
-  },
-};
-
 export const metricsApi = {
   getTRS: (machineId: string, params: MetricsParams) => {
     const query = new URLSearchParams(params as any).toString();
@@ -304,11 +240,6 @@ export const metricsApi = {
     return api.get<{ data: MaintenanceKPIs[] }>(`/maintenance/metrics/all?${query}`);
   },
 
-  getCostReport: (machineId: string, params: MetricsParams) => {
-    const query = new URLSearchParams(params as any).toString();
-    return api.get<{ data: MaintenanceCostReport }>(`/maintenance/metrics/costs/${machineId}?${query}`);
-  },
-
   getPreventiveCorrectiveRatio: (params: MetricsParams) => {
     const query = new URLSearchParams(params as any).toString();
     return api.get<{ data: PreventiveCorrectiveRatio }>(`/maintenance/metrics/ratio?${query}`);
@@ -318,6 +249,5 @@ export const metricsApi = {
 export default {
   machine: machineApi,
   workOrder: workOrderApi,
-  maintenancePlan: maintenancePlanApi,
   metrics: metricsApi,
 };

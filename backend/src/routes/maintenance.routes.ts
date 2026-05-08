@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { MachineController } from '../controllers/maintenance/MachineController';
 import { WorkOrderController } from '../controllers/maintenance/WorkOrderController';
-import { MaintenancePlanController } from '../controllers/maintenance/MaintenancePlanController';
 import { MetricsController } from '../controllers/maintenance/MetricsController';
 import { authenticate } from '../middleware/auth';
 
@@ -10,7 +9,6 @@ const router = Router();
 // Initialize controllers
 const machineController = new MachineController();
 const workOrderController = new WorkOrderController();
-const maintenancePlanController = new MaintenancePlanController();
 const metricsController = new MetricsController();
 
 // Apply authentication to all maintenance routes
@@ -95,35 +93,6 @@ router.post('/work-orders/:id/cancel', (req, res) => workOrderController.cancelW
 // POST /api/v1/maintenance/work-orders/:id/acknowledge - Acknowledge breakdown
 router.post('/work-orders/:id/acknowledge', (req, res) => workOrderController.acknowledgeBreakdown(req, res));
 
-// ==================== Maintenance Plan Routes ====================
-
-// GET /api/v1/maintenance/plans - List all maintenance plans
-router.get('/plans', (req, res) => maintenancePlanController.listPlans(req, res));
-
-// GET /api/v1/maintenance/plans/due - List due plans
-router.get('/plans/due', (req, res) => maintenancePlanController.listDuePlans(req, res));
-
-// GET /api/v1/maintenance/plans/:id - Get maintenance plan by ID
-router.get('/plans/:id', (req, res) => maintenancePlanController.getPlan(req, res));
-
-// POST /api/v1/maintenance/plans - Create new maintenance plan
-router.post('/plans', (req, res) => maintenancePlanController.createPlan(req, res));
-
-// PUT /api/v1/maintenance/plans/:id - Update maintenance plan
-router.put('/plans/:id', (req, res) => maintenancePlanController.updatePlan(req, res));
-
-// POST /api/v1/maintenance/plans/:id/deactivate - Deactivate plan
-router.post('/plans/:id/deactivate', (req, res) => maintenancePlanController.deactivatePlan(req, res));
-
-// POST /api/v1/maintenance/plans/:id/reactivate - Reactivate plan
-router.post('/plans/:id/reactivate', (req, res) => maintenancePlanController.reactivatePlan(req, res));
-
-// POST /api/v1/maintenance/plans/:id/complete - Complete and schedule next
-router.post('/plans/:id/complete', (req, res) => maintenancePlanController.completeAndScheduleNext(req, res));
-
-// POST /api/v1/maintenance/plans/generate-work-orders - Generate work orders for due plans
-router.post('/plans/generate-work-orders', (req, res) => maintenancePlanController.generateWorkOrders(req, res));
-
 // ==================== Metrics Routes ====================
 
 // GET /api/v1/maintenance/metrics/trs/:machineId - Get TRS for machine
@@ -140,9 +109,6 @@ router.get('/metrics/kpis/:machineId', (req, res) => metricsController.getKPIs(r
 
 // GET /api/v1/maintenance/metrics/all - Get all machine metrics
 router.get('/metrics/all', (req, res) => metricsController.getAllMachineMetrics(req, res));
-
-// GET /api/v1/maintenance/metrics/costs/:machineId - Get cost report
-router.get('/metrics/costs/:machineId', (req, res) => metricsController.getCostReport(req, res));
 
 // GET /api/v1/maintenance/metrics/ratio - Get preventive/corrective ratio
 router.get('/metrics/ratio', (req, res) => metricsController.getPreventiveCorrectiveRatio(req, res));

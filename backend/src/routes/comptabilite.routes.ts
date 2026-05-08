@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import { CostComponentController } from '../controllers/comptabilite/CostComponentController';
 import { ProductCostController } from '../controllers/comptabilite/ProductCostController';
 import { OrderCostingController } from '../controllers/comptabilite/OrderCostingController';
 import { CustomerProfitabilityController } from '../controllers/comptabilite/CustomerProfitabilityController';
@@ -10,7 +9,6 @@ import { ROIController } from '../controllers/comptabilite/ROIController';
 const router = Router();
 
 // Instantiate controllers
-const costComponentController = new CostComponentController();
 const productCostController = new ProductCostController();
 const orderCostingController = new OrderCostingController();
 const customerProfitabilityController = new CustomerProfitabilityController();
@@ -18,11 +16,7 @@ const commercialPerformanceController = new CommercialPerformanceController();
 const kpiController = new KPIController();
 const roiController = new ROIController();
 
-// Cost Component Routes
-router.get('/cost-components', (req, res) => costComponentController.list(req, res));
-router.post('/cost-components', (req, res) => costComponentController.create(req, res));
-router.put('/cost-components/:id', (req, res) => costComponentController.update(req, res));
-router.delete('/cost-components/:id', (req, res) => costComponentController.delete(req, res));
+// Cost Component Routes removed
 
 // Product Cost Routes
 router.get('/product-costs', (req, res) => productCostController.list(req, res));

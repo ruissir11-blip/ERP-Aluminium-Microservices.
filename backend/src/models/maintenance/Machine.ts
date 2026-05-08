@@ -1,6 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, Index } from 'typeorm';
 import { MachineDocument } from './MachineDocument';
-import { MaintenancePlan } from './MaintenancePlan';
 import { WorkOrder } from './WorkOrder';
 
 export enum MachineStatus {
@@ -60,9 +59,6 @@ export class Machine {
 
   @OneToMany(() => MachineDocument, (doc) => doc.machine, { cascade: true })
   documents!: MachineDocument[];
-
-  @OneToMany(() => MaintenancePlan, (plan) => plan.machine)
-  maintenancePlans!: MaintenancePlan[];
 
   @OneToMany(() => WorkOrder, (wo) => wo.machine)
   workOrders!: WorkOrder[];

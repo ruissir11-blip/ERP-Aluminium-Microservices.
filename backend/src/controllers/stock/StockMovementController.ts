@@ -1,6 +1,10 @@
 import { Request, Response } from 'express';
 import { StockMovementService } from '../../services/stock/StockMovementService';
 import { MovementType } from '../../models/stock/StockMovement';
+import { AppDataSource } from '../../config/database';
+import { AluminumProfile } from '../../models/aluminium/AluminumProfile';
+import { Warehouse } from '../../models/stock/Warehouse';
+import { isValidUUID } from '../../utils/validators';
 
 export class StockMovementController {
   private movementService: StockMovementService;
@@ -16,7 +20,7 @@ export class StockMovementController {
   async list(req: Request, res: Response): Promise<void> {
     try {
       const page = req.query.page ? Number(req.query.page) : 1;
-      const limit = req.query.limit ? Number(req.query.limit) : 20;
+      const limit = req.query.perPage ? Number(req.query.perPage) : (req.query.limit ? Number(req.query.limit) : 20);
 
       const filters = {
         profileId: req.query.profileId as string | undefined,
@@ -121,7 +125,8 @@ export class StockMovementController {
   async create(req: Request, res: Response): Promise<void> {
     try {
       const { 
-        profileId, 
+        profileId: bodyProfileId,
+        stockItemId, 
         warehouseId, 
         locationId,
         lotId,
@@ -134,17 +139,57 @@ export class StockMovementController {
         performedAt
       } = req.body;
 
-      if (!profileId || !warehouseId || !movementType || quantity === undefined) {
-        res.status(400).json({ error: 'Missing required fields: profileId, warehouseId, movementType, quantity' });
+      const profileId = bodyProfileId || stockItemId;
+
+      if (!profileId) {
+        res.status(400).json({ error: 'L\'identifiant de l\'article (profileId) est requis' });
+        return;
+      }
+      if (!warehouseId) {
+        res.status(400).json({ error: 'L\'identifiant de l\'entrepôt (warehouseId) est requis' });
+        return;
+      }
+      if (!movementType) {
+        res.status(400).json({ error: 'Le type de mouvement est requis' });
+        return;
+      }
+      if (quantity === undefined || quantity === null || isNaN(Number(quantity))) {
+        res.status(400).json({ error: 'La quantité doit être un nombre valide' });
         return;
       }
 
-      // Get user ID from authenticated request
-      const performedBy = (req as any).user?.id || req.body.performedBy;
-      if (!performedBy) {
-        res.status(400).json({ error: 'User not authenticated' });
+      // Verify existence first (handles both UUID and numeric IDs automatically)
+      try {
+        const profileExist = await AppDataSource.getRepository(AluminumProfile).findOne({ where: { id: profileId } });
+        if (!profileExist) {
+          res.status(404).json({ error: `Article (Profile) introuvable pour l'ID: ${profileId}` });
+          return;
+        }
+
+        const warehouseExist = await AppDataSource.getRepository(Warehouse).findOne({ where: { id: warehouseId } });
+        if (!warehouseExist) {
+          res.status(404).json({ error: `Entrepôt introuvable pour l'ID: ${warehouseId}` });
+          return;
+        }
+      } catch (err) {
+        // If database rejects the ID format, return clear error
+        if ((err as any).code === '22P02' || (err as Error).message.includes('uuid')) {
+          res.status(400).json({ 
+            error: `Identifiant invalide: « ${profileId} ». Veuillez sélectionner un article dans la liste.`,
+            details: 'Format UUID attendu'
+          });
+          return;
+        }
+        res.status(400).json({ 
+          error: 'Erreur lors de la vérification des données', 
+          details: (err as Error).message,
+          received: { profileId, warehouseId } 
+        });
         return;
       }
+
+      // Get user ID from authenticated request (middleware guarantees this exists)
+      const performedBy = req.user!.id;
 
       const movement = await this.movementService.create({
         profileId,
@@ -158,13 +203,18 @@ export class StockMovementController {
         referenceType: referenceType || 'MANUAL',
         referenceId: referenceId || `MOV-${Date.now()}`,
         performedBy,
-        performedAt: performedAt ? new Date(performedAt) : new Date(),
+        performedAt: (performedAt && !isNaN(new Date(performedAt).getTime())) ? new Date(performedAt) : new Date(),
         ipAddress: req.ip,
       });
 
       res.status(201).json({ success: true, data: movement });
     } catch (error) {
-      res.status(500).json({ error: 'Failed to create movement', details: (error as Error).message });
+      console.error('SERVER ERROR IN CREATE MOVEMENT:', error);
+      res.status(500).json({ 
+        error: 'Failed to create movement', 
+        details: (error as Error).message,
+        stack: process.env.NODE_ENV === 'development' ? (error as Error).stack : undefined
+      });
     }
   }
 }

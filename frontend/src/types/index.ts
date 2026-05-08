@@ -95,6 +95,9 @@ export interface CustomerOrder {
   status: OrderStatus;
   deliveryDate?: string;
   subtotal: number;
+  discountPercent: number;
+  discountAmount: number;
+  vatRate: number;
   vatAmount: number;
   total: number;
   notes?: string;

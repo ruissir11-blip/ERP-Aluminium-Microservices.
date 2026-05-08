@@ -10,6 +10,9 @@ router.get('/', invoiceController.list.bind(invoiceController));
 // Get invoice by ID
 router.get('/:id', invoiceController.getById.bind(invoiceController));
 
+// Get PDF
+router.get('/:id/pdf', invoiceController.getPdf.bind(invoiceController));
+
 // Create invoice from order
 router.post('/from-order', invoiceController.createFromOrder.bind(invoiceController));
 

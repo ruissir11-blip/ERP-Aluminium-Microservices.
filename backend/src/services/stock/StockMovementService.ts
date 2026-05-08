@@ -219,14 +219,18 @@ export class StockMovementService {
       const movementRepository = manager.getRepository(StockMovement);
       const itemRepository = manager.getRepository(InventoryItem);
 
-      // Find inventory item
-      let item = await itemRepository.findOne({
-        where: {
-          profileId: data.profileId,
-          warehouseId: data.warehouseId,
-          ...(data.locationId ? { locationId: data.locationId } : {}),
-        },
-      });
+      // Find inventory item - explicitly use locationId and lotId to match the unique index
+      const where: any = {
+        profileId: data.profileId,
+        warehouseId: data.warehouseId,
+      };
+      
+      // If locationId/lotId are specified, use them. Otherwise, we assume we're looking for the 'general' stock (null location/lot)
+      // Note: This logic might need adjustment if products are always in a location
+      where.locationId = data.locationId || null;
+      where.lotId = data.lotId || null;
+
+      let item = await itemRepository.findOne({ where });
 
       const previousQuantity = item ? Number(item.quantityOnHand) : 0;
       let newQuantity = previousQuantity;

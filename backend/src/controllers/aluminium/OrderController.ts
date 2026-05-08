@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
 import { AppDataSource } from '../../config/database';
 import { CustomerOrder, OrderStatus } from '../../models/aluminium/CustomerOrder';
-import { Quote } from '../../models/aluminium/Quote';
-import { QuoteStatus } from '../../models/aluminium/Quote';
+import { Quote, QuoteStatus } from '../../models/aluminium/Quote';
+import { PdfService } from '../../services/aluminium/PdfService';
 
 const orderRepository = () => AppDataSource.getRepository(CustomerOrder);
 const quoteRepository = () => AppDataSource.getRepository(Quote);
@@ -227,6 +227,74 @@ export class OrderController {
       return res.status(500).json({ 
         success: false, 
         error: { message: 'Failed to update order status' } 
+      });
+    }
+  }
+
+  async update(req: Request, res: Response): Promise<Response> {
+    try {
+      const { id } = req.params;
+      const { deliveryDate, notes, status } = req.body;
+
+      const order = await orderRepository().findOne({
+        where: { id }
+      });
+
+      if (!order) {
+        return res.status(404).json({ 
+          success: false, 
+          error: { message: 'Order not found' } 
+        });
+      }
+
+      await orderRepository().update(id, {
+        ...(deliveryDate && { deliveryDate: new Date(deliveryDate) }),
+        ...(notes !== undefined && { notes }),
+        ...(status && { status: status as OrderStatus })
+      });
+
+      const updatedOrder = await orderRepository().findOne({
+        where: { id },
+        relations: ['customer', 'quote']
+      });
+
+      return res.json({ success: true, data: updatedOrder });
+    } catch (error) {
+      console.error('Error updating order:', error);
+      return res.status(500).json({ 
+        success: false, 
+        error: { message: 'Failed to update order' } 
+      });
+    }
+  }
+
+  async downloadDeliveryNote(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const order = await orderRepository().findOne({
+        where: { id },
+        relations: ['customer', 'quote', 'quote.lines', 'quote.lines.profile']
+      });
+
+      if (!order) {
+        res.status(404).json({ 
+          success: false, 
+          error: { message: 'Order not found' } 
+        });
+        return;
+      }
+
+      const pdfService = new PdfService();
+      const pdfBuffer = await pdfService.generateDeliveryNotePdf(order);
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="BL-${order.orderNumber}.pdf"`);
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error('Error generating BL PDF:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: { message: 'Failed to generate Delivery Note' } 
       });
     }
   }

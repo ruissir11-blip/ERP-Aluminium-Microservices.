@@ -68,7 +68,7 @@ export class MachineService {
   async findById(id: string): Promise<Machine | null> {
     return this.machineRepository.findOne({
       where: { id },
-      relations: ['documents', 'maintenancePlans', 'workOrders'],
+      relations: ['documents', 'workOrders'],
     });
   }
 
@@ -211,22 +211,17 @@ export class MachineService {
   }
 
   /**
-   * Get machines needing maintenance (approaching next due date)
+   * Get machines that require attention in the near term
+   * (fallback logic now based on machine status only)
    */
-  async findMachinesNeedingMaintenance(daysAhead: number = 7): Promise<Machine[]> {
-    const futureDate = new Date();
-    futureDate.setDate(futureDate.getDate() + daysAhead);
-
-    return this.machineRepository
-      .createQueryBuilder('machine')
-      .innerJoin('machine.maintenancePlans', 'plans')
-      .where('plans.isActive = :isActive', { isActive: true })
-      .andWhere('plans.nextDueDate <= :futureDate', { futureDate })
-      .andWhere('machine.status NOT IN (:...excludedStatuses)', { 
-        excludedStatuses: [MachineStatus.ARCHIVED] 
-      })
-      .orderBy('plans.nextDueDate', 'ASC')
-      .getMany();
+  async findMachinesNeedingMaintenance(_daysAhead: number = 7): Promise<Machine[]> {
+    return this.machineRepository.find({
+      where: [
+        { status: MachineStatus.MAINTENANCE },
+        { status: MachineStatus.BROKEN_DOWN },
+      ],
+      order: { designation: 'ASC' },
+    });
   }
 
   /**

@@ -4,6 +4,7 @@ import { Invoice, InvoiceStatus } from '../../models/aluminium/Invoice';
 import { CustomerOrder, OrderStatus } from '../../models/aluminium/CustomerOrder';
 import { sendEmail } from '../../config/email';
 import Decimal from 'decimal.js';
+import PdfService from './PdfService';
 
 export interface CreateInvoiceInput {
   orderId: string;
@@ -16,6 +17,12 @@ export interface CreateInvoiceInput {
 
 export interface UpdateInvoiceInput {
   status?: InvoiceStatus;
+  invoiceDate?: Date;
+  dueDate?: Date;
+  vatRate?: number;
+  subtotal?: number;
+  vatAmount?: number;
+  total?: number;
   paymentMethod?: string;
   paymentDate?: Date;
   paymentReference?: string;
@@ -25,10 +32,12 @@ export interface UpdateInvoiceInput {
 export class InvoiceService {
   private invoiceRepository: Repository<Invoice>;
   private orderRepository: Repository<CustomerOrder>;
+  private pdfService: PdfService;
 
   constructor() {
     this.invoiceRepository = AppDataSource.getRepository(Invoice);
     this.orderRepository = AppDataSource.getRepository(CustomerOrder);
+    this.pdfService = new PdfService();
   }
 
   /**
@@ -69,7 +78,7 @@ export class InvoiceService {
   async findById(id: string): Promise<Invoice | null> {
     return this.invoiceRepository.findOne({
       where: { id },
-      relations: ['customer', 'order'],
+      relations: ['customer', 'order', 'order.quote', 'order.quote.lines', 'order.quote.lines.profile'],
     });
   }
 
@@ -112,7 +121,7 @@ export class InvoiceService {
     }
 
     // Calculate amounts
-    const vatRate = input.vatRate || 20;
+    const vatRate = input.vatRate || 19;
     const subtotal = new Decimal(order.total.toString());
     const vatAmount = subtotal.mul(vatRate).div(100);
     const total = subtotal.add(vatAmount);
@@ -150,6 +159,18 @@ export class InvoiceService {
   }
 
   /**
+   * Generate PDF for an invoice
+   */
+  async generatePdf(id: string): Promise<Buffer> {
+    const invoice = await this.findById(id);
+    if (!invoice) {
+      throw new Error('Invoice not found');
+    }
+
+    return this.pdfService.generateInvoicePdf(invoice);
+  }
+
+  /**
    * Update invoice
    */
   async update(id: string, input: UpdateInvoiceInput): Promise<Invoice> {
@@ -158,7 +179,13 @@ export class InvoiceService {
       throw new Error('Invoice not found');
     }
 
-    Object.assign(invoice, input);
+    const { invoiceDate, dueDate, paymentDate, ...rest } = input;
+    
+    if (invoiceDate) invoice.invoiceDate = new Date(invoiceDate);
+    if (dueDate) invoice.dueDate = new Date(dueDate);
+    if (paymentDate) invoice.paymentDate = new Date(paymentDate);
+    
+    Object.assign(invoice, rest);
     return this.invoiceRepository.save(invoice);
   }
 
@@ -188,7 +215,12 @@ export class InvoiceService {
       throw new Error('Invoice not found');
     }
 
-    if (invoice.status !== InvoiceStatus.VALIDÉE) {
+    // Auto-validate if it's still draft
+    if (invoice.status === InvoiceStatus.BROUILLON) {
+      invoice.status = InvoiceStatus.VALIDÉE;
+    }
+
+    if (invoice.status !== InvoiceStatus.VALIDÉE && invoice.status !== InvoiceStatus.ENVOYÉE) {
       throw new Error('Only validated invoices can be sent');
     }
 
@@ -203,7 +235,7 @@ export class InvoiceService {
         await sendEmail({
           to: [invoice.customer.email],
           subject: `Facture ${invoice.invoiceNumber}`,
-          text: `Madame, Monsieur,\n\nVeuillez trouver ci-joint la facture ${invoice.invoiceNumber} d'un montant de ${invoice.total} €.\n\nDate d'échéance: ${invoice.dueDate.toLocaleDateString()}\n\nCordialement,\nL'équipe Aluminium ERP`,
+          text: `Madame, Monsieur,\n\nVeuillez trouver ci-joint la facture ${invoice.invoiceNumber} d'un montant de ${invoice.total} DT.\n\nDate d'échéance: ${invoice.dueDate.toLocaleDateString('fr-TN')}\n\nCordialement,\nL'équipe Aluminium ERP`,
         });
       }
     } catch (error) {

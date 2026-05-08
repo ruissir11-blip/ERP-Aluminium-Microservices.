@@ -188,6 +188,23 @@ const QuoteList: React.FC = () => {
     }
   };
 
+  const handlePrint = async (quote: Quote) => {
+    try {
+      const response = await quoteApi.generatePdf(quote.id);
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `devis-${quote.quoteNumber}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      message.error('Erreur lors de l\'impression: ' + (error.message || 'Erreur inconnue'));
+    }
+  };
+
   const handleSubmit = async (values: any) => {
     try {
       const data = {
@@ -269,7 +286,7 @@ const QuoteList: React.FC = () => {
       key: 'total',
       render: (total: number | string) => {
         const num = typeof total === 'string' ? parseFloat(total) : total;
-        return num?.toFixed?.(2) || '0.00';
+        return num?.toFixed?.(3) || '0.000';
       }
     },
     {
@@ -483,7 +500,7 @@ const QuoteList: React.FC = () => {
       <Drawer
         title={`Devis ${selectedQuote?.quoteNumber || ''}`}
         placement="right"
-        width={600}
+        width={700}
         open={detailVisible}
         onClose={() => setDetailVisible(false)}
       >
@@ -499,10 +516,10 @@ const QuoteList: React.FC = () => {
                 </Tag>
               </Descriptions.Item>
               <Descriptions.Item label="Sous-total">
-                {typeof selectedQuote.subtotal === 'string' ? parseFloat(selectedQuote.subtotal).toFixed(2) : selectedQuote.subtotal?.toFixed(2)} DT
+                {typeof selectedQuote.subtotal === 'string' ? parseFloat(selectedQuote.subtotal).toFixed(3) : selectedQuote.subtotal?.toFixed(3)} DT
               </Descriptions.Item>
               <Descriptions.Item label="Total">
-                <strong>{typeof selectedQuote.total === 'string' ? parseFloat(selectedQuote.total).toFixed(2) : selectedQuote.total?.toFixed(2)} DT</strong>
+                <strong>{typeof selectedQuote.total === 'string' ? parseFloat(selectedQuote.total).toFixed(3) : selectedQuote.total?.toFixed(3)} DT</strong>
               </Descriptions.Item>
               <Descriptions.Item label="Valide jusqu'au">
                 {moment(selectedQuote.validUntil).format('DD/MM/YYYY')}
@@ -542,13 +559,13 @@ const QuoteList: React.FC = () => {
                     title: 'Prix unit.',
                     dataIndex: 'unitPrice',
                     key: 'unitPrice',
-                    render: (val) => `${typeof val === 'string' ? parseFloat(val).toFixed(2) : val?.toFixed(2)} DT`
+                    render: (val) => `${typeof val === 'string' ? parseFloat(val).toFixed(3) : val?.toFixed(3)} DT`
                   },
                   {
                     title: 'Total',
                     dataIndex: 'lineTotal',
                     key: 'lineTotal',
-                    render: (val) => `${typeof val === 'string' ? parseFloat(val).toFixed(2) : val?.toFixed(2)} DT`
+                    render: (val) => `${typeof val === 'string' ? parseFloat(val).toFixed(3) : val?.toFixed(3)} DT`
                   }
                 ]}
               />
@@ -608,7 +625,10 @@ const QuoteList: React.FC = () => {
                   Convertir en commande
                 </Button>
               )}
-              <Button icon={<PrinterOutlined />}>
+              <Button 
+                icon={<PrinterOutlined />}
+                onClick={() => handlePrint(selectedQuote)}
+              >
                 Imprimer
               </Button>
             </Space>

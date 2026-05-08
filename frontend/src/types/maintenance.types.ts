@@ -39,32 +39,6 @@ export interface MachineDocument {
   uploadedAt: string;
 }
 
-export enum MaintenanceFrequency {
-  DAILY = 'DAILY',
-  WEEKLY = 'WEEKLY',
-  MONTHLY = 'MONTHLY',
-  QUARTERLY = 'QUARTERLY',
-  SEMI_ANNUAL = 'SEMI_ANNUAL',
-  ANNUAL = 'ANNUAL',
-}
-
-export interface MaintenancePlan {
-  id: string;
-  machineId: string;
-  machine?: Machine;
-  description: string;
-  taskType: string;
-  frequency: MaintenanceFrequency;
-  frequencyDays?: number;
-  estimatedDurationHours?: number;
-  nextDueDate?: string;
-  lastCompletedDate?: string;
-  isActive: boolean;
-  assignedTechnicianId?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export enum WorkOrderType {
   PREVENTIVE = 'PREVENTIVE',
   CORRECTIVE = 'CORRECTIVE',
@@ -93,7 +67,6 @@ export interface WorkOrder {
   workOrderNumber: string;
   machineId: string;
   machine?: Machine;
-  maintenancePlanId?: string;
   type: WorkOrderType;
   status: WorkOrderStatus;
   priority: WorkOrderPriority;

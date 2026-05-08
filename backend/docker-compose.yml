@@ -1,4 +1,4 @@
-version: '3.8'
+# version: '3.8'  (obsolete, removed for Docker Compose v2+)
 
 # ============================================================
 #  ERP Aluminium — Docker Compose (Microservices)
@@ -21,6 +21,8 @@ services:
       - "80:80"
     depends_on:
       backend:
+        condition: service_healthy
+      erp-rh-service:
         condition: service_healthy
       ai-service:
         condition: service_healthy
@@ -63,6 +65,52 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+
+  # ──────────────────────────────────────────────────────────
+  #  ERP RH SERVICE — Microservice RH (Node.js:5001)
+  #  Données isolées dans le schema 'rh_schema'
+  # ──────────────────────────────────────────────────────────
+  erp-rh-service:
+    build:
+      context: ../microservice-rh
+      dockerfile: docker/Dockerfile
+      target: development
+    container_name: erp-rh-service
+    ports:
+      - "5001:5001"
+    volumes:
+      - ../microservice-rh/src:/app/src
+      - /app/node_modules
+    env_file:
+      - ../microservice-rh/.env
+    environment:
+      - NODE_ENV=development
+      - PORT=5001
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=erp_aluminium
+      - DB_SCHEMA=rh_schema
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      # Same JWT secret as the main backend for token validation
+      - JWT_SECRET=your-super-secret-256-bit-key-change-in-production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - erp-network
+    restart: unless-stopped
+    healthcheck:
+      # /health is registered directly on the express app (no /api/v1/hr prefix)
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   # ──────────────────────────────────────────────────────────
   #  AI SERVICE — FastAPI (Python 3.10 + Prophet + Statsmodels)

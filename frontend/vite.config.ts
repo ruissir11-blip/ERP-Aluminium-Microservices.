@@ -7,11 +7,17 @@ export default defineConfig({
   server: {
     port: 3004,
     proxy: {
-      '/api': {
+      // ── HR microservice (port 5001) – must be declared BEFORE the generic rules ──
+      '/api/v1/hr': {
+        target: 'http://localhost:5001',
+        changeOrigin: true,
+      },
+      // ── Main backend (port 3003) ──────────────────────────────────────────────
+      '/api/v1': {
         target: 'http://localhost:3003',
         changeOrigin: true,
       },
-      '/api/v1': {
+      '/api': {
         target: 'http://localhost:3003',
         changeOrigin: true,
       },

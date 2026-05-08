@@ -230,6 +230,12 @@ export const orderService = {
   
   updateStatus: (id: string, status: string) => 
     api.patch<ApiResponse<CustomerOrder>>(`/orders/${id}/status`, { status }),
+  
+  update: (id: string, data: Partial<CustomerOrder>) => 
+    api.patch<ApiResponse<CustomerOrder>>(`/orders/${id}`, data),
+
+  generateDeliveryNote: (id: string) => 
+    api.get(`/orders/${id}/delivery-note`, { responseType: 'blob' }),
 };
 
 // Stock Service (Module B)

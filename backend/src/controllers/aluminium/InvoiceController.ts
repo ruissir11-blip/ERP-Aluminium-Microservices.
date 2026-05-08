@@ -57,6 +57,29 @@ export class InvoiceController {
   }
 
   /**
+   * GET /api/v1/invoices/:id/pdf
+   * Generate and stream PDF
+   */
+  async getPdf(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+
+      if (!isValidUUID(id)) {
+        res.status(400).json({ error: 'Invalid invoice ID format' });
+        return;
+      }
+
+      const pdf = await this.invoiceService.generatePdf(id);
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=invoice-${id}.pdf`);
+      res.send(pdf);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to generate PDF', details: (error as Error).message });
+    }
+  }
+
+  /**
    * POST /api/v1/invoices/from-order
    * Create invoice from order
    */

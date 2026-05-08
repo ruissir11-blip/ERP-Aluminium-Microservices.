@@ -87,7 +87,7 @@ export class HRModule1705000000000 implements MigrationInterface {
         address VARCHAR(255),
         city VARCHAR(100),
         postal_code VARCHAR(20),
-        country VARCHAR(100) DEFAULT 'France',
+        country VARCHAR(100) DEFAULT 'Tunisie',
         emergency_contact VARCHAR(200),
         emergency_phone VARCHAR(20),
         national_id VARCHAR(50),

@@ -30,7 +30,6 @@ import { Quote } from '../models/aluminium/Quote';
 import { QuoteLine } from '../models/aluminium/QuoteLine';
 import { Machine } from '../models/maintenance/Machine';
 import { MachineDocument } from '../models/maintenance/MachineDocument';
-import { MaintenancePlan } from '../models/maintenance/MaintenancePlan';
 import { WorkOrder } from '../models/maintenance/WorkOrder';
 import { WorkOrderPart } from '../models/maintenance/WorkOrderPart';
 import { BreakdownRecord } from '../models/maintenance/BreakdownRecord';
@@ -52,20 +51,6 @@ import { NCRootCause } from '../models/quality/NCRootCause';
 import { CorrectiveAction } from '../models/quality/CorrectiveAction';
 import { QualityDecision } from '../models/quality/QualityDecision';
 import { CertificateOfConformity } from '../models/quality/CertificateOfConformity';
-import { Employee } from '../models/hr/Employee';
-import { Department } from '../models/hr/Department';
-import { Poste } from '../models/hr/Poste';
-import { EmployeePost } from '../models/hr/EmployeePost';
-import { EmployeeContract } from '../models/hr/EmployeeContract';
-import { LeaveRequest } from '../models/hr/LeaveRequest';
-import { Attendance } from '../models/hr/Attendance';
-import { Payslip } from '../models/hr/Payslip';
-import { Training } from '../models/hr/Training';
-import { TrainingSession } from '../models/hr/TrainingSession';
-import { TrainingEnrollment } from '../models/hr/TrainingEnrollment';
-import { PerformanceReview } from '../models/hr/PerformanceReview';
-import { RecruitmentJob } from '../models/hr/RecruitmentJob';
-import { RecruitmentCandidate } from '../models/hr/RecruitmentCandidate';
 
 // Re-export entities for external use
 export { User } from '../models/User';
@@ -81,7 +66,6 @@ export { Quote } from '../models/aluminium/Quote';
 export { QuoteLine } from '../models/aluminium/QuoteLine';
 export { Machine } from '../models/maintenance/Machine';
 export { MachineDocument } from '../models/maintenance/MachineDocument';
-export { MaintenancePlan } from '../models/maintenance/MaintenancePlan';
 export { WorkOrder } from '../models/maintenance/WorkOrder';
 export { WorkOrderPart } from '../models/maintenance/WorkOrderPart';
 export { BreakdownRecord } from '../models/maintenance/BreakdownRecord';
@@ -103,8 +87,9 @@ export { NCRootCause } from '../models/quality/NCRootCause';
 export { CorrectiveAction } from '../models/quality/CorrectiveAction';
 export { QualityDecision } from '../models/quality/QualityDecision';
 export { CertificateOfConformity } from '../models/quality/CertificateOfConformity';
-export { Employee } from '../models/hr/Employee';
-export { Department } from '../models/hr/Department';
+// HR Module - REMOVED (now in microservice-rh)
+    // export { Employee } from '../models/hr/Employee';
+    // export { Department } from '../models/hr/Department';
 export { Poste } from '../models/hr/Poste';
 export { EmployeePost } from '../models/hr/EmployeePost';
 export { EmployeeContract } from '../models/hr/EmployeeContract';
@@ -141,7 +126,6 @@ export const AppDataSource = new DataSource({
     QuoteLine,
     Machine,
     MachineDocument,
-    MaintenancePlan,
     WorkOrder,
     WorkOrderPart,
     BreakdownRecord,
@@ -163,21 +147,7 @@ export const AppDataSource = new DataSource({
     CorrectiveAction,
     QualityDecision,
     CertificateOfConformity,
-    // HR Module Entities
-    Employee,
-    Department,
-    Poste,
-    EmployeePost,
-    EmployeeContract,
-    LeaveRequest,
-    Attendance,
-    Payslip,
-    Training,
-    TrainingSession,
-    TrainingEnrollment,
-    PerformanceReview,
-    RecruitmentJob,
-    RecruitmentCandidate,
+    // HR Module entities are in microservice-rh - DO NOT add them here
   ],
   migrations: ['src/migrations/**/*.{ts,js}'],
   subscribers: [],

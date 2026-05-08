@@ -1,6 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, OneToMany, JoinColumn, Index } from 'typeorm';
 import { Machine } from './Machine';
-import { MaintenancePlan } from './MaintenancePlan';
 import { WorkOrderPart } from './WorkOrderPart';
 import { BreakdownRecord } from './BreakdownRecord';
 
@@ -47,13 +46,6 @@ export class WorkOrder {
   @ManyToOne(() => Machine, (machine) => machine.workOrders, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'machine_id' })
   machine!: Machine;
-
-  @Column({ type: 'uuid', nullable: true, name: 'maintenance_plan_id' })
-  maintenancePlanId?: string;
-
-  @ManyToOne(() => MaintenancePlan, { onDelete: 'SET NULL', nullable: true })
-  @JoinColumn({ name: 'maintenance_plan_id' })
-  maintenancePlan?: MaintenancePlan;
 
   @Column({ type: 'enum', enum: WorkOrderType })
   type!: WorkOrderType;

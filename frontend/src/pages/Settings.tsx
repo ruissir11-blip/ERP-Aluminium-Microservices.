@@ -107,8 +107,8 @@ const Settings: React.FC = () => {
                     </Col>
                     <Col span={12}>
                       <Form.Item label="Fuseau Horaire">
-                        <Select defaultValue="europe-paris">
-                          <Option value="europe-paris">Europe/Paris (UTC+1)</Option>
+                        <Select defaultValue="africa-tunis">
+                          <Option value="africa-tunis">Africa/Tunis (UTC+1)</Option>
                           <Option value="utc">UTC</Option>
                         </Select>
                       </Form.Item>
@@ -183,11 +183,11 @@ const Settings: React.FC = () => {
                       </Row>
 
                       <Form.Item label="Email">
-                        <Input type="email" defaultValue="admin@alutech.fr" />
+                        <Input type="email" defaultValue="admin@alutech.tn" />
                       </Form.Item>
 
                       <Form.Item label="Téléphone">
-                        <Input defaultValue="+33 1 23 45 67 89" />
+                        <Input defaultValue="+216 71 234 567" />
                       </Form.Item>
 
                       <Form.Item label="Fonction">
@@ -250,9 +250,7 @@ const Settings: React.FC = () => {
                   <Space>
                     <KeyOutlined style={{ fontSize: 24, color: '#52c41a' }} />
                     <div style={{ flex: 1 }}>
-                      <Text strong>Session actuelle</Text>
-                      <br />
-                      <Text type="secondary">Chrome sur Windows - Paris, France</Text>
+                      <Text type="secondary">Chrome sur Windows - Kairouan, Tunisie</Text>
                     </div>
                     <Button danger>Déconnecter</Button>
                   </Space>
@@ -356,31 +354,36 @@ const Settings: React.FC = () => {
                   </Form.Item>
 
                   <Form.Item label="Adresse">
-                    <Input.TextArea rows={3} defaultValue="123 Rue de l'Aluminium\n75001 Paris, France" />
+                    <Input.TextArea rows={3} defaultValue="Kairouan Trik Haffouz\nTunisie" />
                   </Form.Item>
 
                   <Row gutter={16}>
-                    <Col span={12}>
+                    <Col span={8}>
                       <Form.Item label="Téléphone">
-                        <Input defaultValue="+33 1 23 45 67 89" />
+                        <Input defaultValue="+216 29 772 644" />
                       </Form.Item>
                     </Col>
-                    <Col span={12}>
+                    <Col span={8}>
+                      <Form.Item label="Fax">
+                        <Input defaultValue="77 276 268" />
+                      </Form.Item>
+                    </Col>
+                    <Col span={8}>
                       <Form.Item label="Email">
-                        <Input type="email" defaultValue="contact@alutech.fr" />
+                        <Input type="email" defaultValue="contact@alutech.tn" />
                       </Form.Item>
                     </Col>
                   </Row>
 
                   <Row gutter={16}>
                     <Col span={12}>
-                      <Form.Item label="SIRET">
-                        <Input defaultValue="123 456 789 00012" />
+                      <Form.Item label="Matricule Fiscal">
+                        <Input defaultValue="1234567/A/M/000" />
                       </Form.Item>
                     </Col>
                     <Col span={12}>
-                      <Form.Item label="TVA Intracommunautaire">
-                        <Input defaultValue="FR12 3456 7890 12" />
+                      <Form.Item label="Code TVA">
+                        <Input defaultValue="1234567A" />
                       </Form.Item>
                     </Col>
                   </Row>

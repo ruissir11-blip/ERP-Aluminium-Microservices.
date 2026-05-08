@@ -37,8 +37,8 @@ export function PayslipList() {
     try {
       await payslipApi.generate({
         employeeId,
-        periodMonth,
-        periodYear,
+        month: periodMonth,
+        year: periodYear,
       });
       loadPayslips();
     } catch (err) {
@@ -51,8 +51,8 @@ export function PayslipList() {
     try {
       setGenerating(true);
       await payslipApi.generateBatch({
-        periodMonth,
-        periodYear,
+        month: periodMonth,
+        year: periodYear,
       });
       loadPayslips();
     } catch (err) {
@@ -99,7 +99,7 @@ export function PayslipList() {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount);
+    return new Intl.NumberFormat('fr-TN', { style: 'currency', currency: 'TND' }).format(amount);
   };
 
   const getEmployeeName = (employee: any) => {

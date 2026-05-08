@@ -47,7 +47,7 @@ export class Quote {
   @Column({ type: 'decimal', precision: 15, scale: 4, default: 0, name: 'discount_amount' })
   discountAmount!: number;
 
-  @Column({ type: 'decimal', precision: 5, scale: 2, default: 20.00, name: 'vat_rate' })
+  @Column({ type: 'decimal', precision: 5, scale: 2, default: 19.00, name: 'vat_rate' })
   vatRate!: number;
 
   @Column({ type: 'decimal', precision: 15, scale: 4, name: 'vat_amount' })

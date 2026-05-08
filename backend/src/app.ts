@@ -32,7 +32,6 @@ import dashboardRoutes from './routes/dashboard.routes';
 import qualityRoutes from './routes/quality.routes';
 import comptabiliteRoutes from './routes/comptabilite.routes';
 import biRoutes from './routes/bi.routes';
-import hrRoutes from './routes/hr.routes';
 
 dotenv.config();
 
@@ -180,17 +179,43 @@ app.use(`${API_PREFIX}/comptabilite`, comptabiliteRoutes);
 // BI Dashboards Module Routes
 app.use(`${API_PREFIX}/bi`, biRoutes);
 
-// HR Module Routes
-app.use(`${API_PREFIX}/hr`, hrRoutes);
+
 
 // Handle favicon.ico requests to prevent 404 errors
+// This must be before static files and the catch-all route
 app.get('/favicon.ico', (req: Request, res: Response) => {
-  // Return a 204 No Content response (or could serve an actual icon)
+  // Return a 1x1 transparent PNG as a minimal favicon (avoids network errors)
+  const transparentPng = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAEklEQVQ4jWNgGAWjYBSMgpEOAAR0AgT/Uf7hAAAAAElFTkSuQmCC',
+    'base64'
+  );
+  res.set('Content-Type', 'image/x-icon');
+  res.set('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
+  res.send(transparentPng);
+});
+
+// Also handle Apple touch icons and other common favicon formats
+app.get('/apple-touch-icon.png', (req: Request, res: Response) => {
+  res.status(204).end();
+});
+
+app.get('/apple-touch-icon-precomposed.png', (req: Request, res: Response) => {
   res.status(204).end();
 });
 
 // Serve static frontend files from project root (must be after API routes)
-app.use(express.static(path.join(__dirname, '../..')));
+app.use(express.static(path.join(__dirname, '../..'), {
+  // Set default file to serve for directory requests
+  index: ['index.html', 'index.htm'],
+  // Set cache headers for static assets
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    } else if (filePath.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year
+    }
+  }
+}));
 
 // Serve index.html for all non-API routes (SPA support - must be last)
 app.get('*', (req: Request, res: Response) => {

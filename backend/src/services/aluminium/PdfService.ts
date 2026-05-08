@@ -3,6 +3,7 @@ import { Quote } from '../../models/aluminium/Quote';
 import fs from 'fs';
 import path from 'path';
 import Handlebars from 'handlebars';
+import logger from '../../config/logger';
 
 export interface QuotePdfData {
   quoteNumber: string;
@@ -50,11 +51,37 @@ export class PdfService {
    * Initialize the browser instance
    */
   private async initBrowser(): Promise<Browser> {
+    if (this.browser && !this.browser.isConnected()) {
+      try {
+        await this.browser.close();
+      } catch (e) {
+        // Ignore
+      }
+      this.browser = null;
+    }
+
     if (!this.browser) {
-      this.browser = await puppeteer.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      });
+      try {
+        logger.info('Launching Puppeteer browser...');
+        this.browser = await puppeteer.launch({
+          headless: true,
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--disable-gpu',
+          ],
+        });
+        logger.info('Puppeteer browser launched successfully');
+      } catch (error) {
+        const msg = (error as Error).message;
+        logger.error('Failed to launch Puppeteer browser', { error: msg });
+        if (msg.includes('Could not find Chromium')) {
+          throw new Error('Chromium n\'est pas installé sur le serveur. Veuillez exécuter "npx puppeteer install" dans le dossier backend.');
+        }
+        throw error;
+      }
     }
     return this.browser;
   }
@@ -80,6 +107,28 @@ export class PdfService {
 
     const template = Handlebars.compile(templateSource);
     this.templateCache.set('quote', template);
+    return template;
+  }
+
+  /**
+   * Get or compile the invoice template
+   */
+  private async getInvoiceTemplate(): Promise<HandlebarsTemplateDelegate> {
+    const templatePath = path.join(__dirname, '../templates/emails/invoice-pdf.hbs');
+    
+    if (this.templateCache.has('invoice')) {
+      return this.templateCache.get('invoice')!;
+    }
+
+    let templateSource: string;
+    if (fs.existsSync(templatePath)) {
+      templateSource = fs.readFileSync(templatePath, 'utf-8');
+    } else {
+      templateSource = this.getDefaultInvoiceTemplate();
+    }
+
+    const template = Handlebars.compile(templateSource);
+    this.templateCache.set('invoice', template);
     return template;
   }
 
@@ -171,9 +220,9 @@ export class PdfService {
     <div class="header">
       <div class="company-info">
         <div class="company-name">ERP Aluminium</div>
-        <div>123 Rue de l'Aluminium</div>
-        <div>75001 Paris, France</div>
-        <div>Tél: +33 1 23 45 67 89</div>
+        <div>Kairouan Trik Haffouz</div>
+        <div>Tunisie</div>
+        <div>Tél: +216 29 772 644 / Fax: 77 276 268</div>
       </div>
       <div class="quote-info">
         <div class="quote-number">Devis {{quoteNumber}}</div>
@@ -212,9 +261,9 @@ export class PdfService {
             <th class="text-right">Longueur (m)</th>
             <th class="text-right">Poids unit. (kg)</th>
             <th class="text-right">Poids total (kg)</th>
-            <th class="text-right">Prix unit. (€)</th>
-            <th class="text-right">Remise (€)</th>
-            <th class="text-right">Total (€)</th>
+            <th class="text-right">Prix unit. (DT)</th>
+            <th class="text-right">Remise (DT)</th>
+            <th class="text-right">Total (DT)</th>
           </tr>
         </thead>
         <tbody>
@@ -240,21 +289,21 @@ export class PdfService {
       <div class="totals">
         <div class="total-row">
           <span>Sous-total:</span>
-          <span>{{formatNumber subtotal 2}} €</span>
+          <span>{{formatNumber subtotal 3}} DT</span>
         </div>
         {{#if discountPercent}}
         <div class="total-row">
           <span>Remise ({{discountPercent}}%):</span>
-          <span>-{{formatNumber discountAmount 2}} €</span>
+          <span>-{{formatNumber discountAmount 3}} DT</span>
         </div>
         {{/if}}
         <div class="total-row">
           <span>TVA ({{vatRate}}%):</span>
-          <span>{{formatNumber vatAmount 2}} €</span>
+          <span>{{formatNumber vatAmount 3}} DT</span>
         </div>
         <div class="total-row final">
           <span>Total TTC:</span>
-          <span>{{formatNumber total 2}} €</span>
+          <span>{{formatNumber total 3}} DT</span>
         </div>
       </div>
     </div>
@@ -286,22 +335,330 @@ export class PdfService {
   }
 
   /**
+   * Get default invoice PDF template
+   */
+  private getDefaultInvoiceTemplate(): string {
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 12px; color: #333; }
+    .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+    
+    .header { display: flex; justify-content: space-between; margin-bottom: 30px; border-bottom: 2px solid #4f46e5; padding-bottom: 20px; }
+    .company-info { font-size: 14px; }
+    .company-name { font-size: 24px; font-weight: bold; color: #4f46e5; }
+    .invoice-info { text-align: right; }
+    .invoice-number { font-size: 18px; font-weight: bold; }
+    .invoice-date { color: #666; }
+    
+    .status-badge { 
+      display: inline-block; 
+      padding: 4px 12px; 
+      border-radius: 12px; 
+      font-size: 11px; 
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+    .status-VALIDÉE { background: #dbeafe; color: #1e40af; }
+    .status-PAYÉE { background: #d1fae5; color: #065f46; }
+    .status-EN_RETARD { background: #fee2e2; color: #991b1b; }
+    
+    .section { margin-bottom: 25px; }
+    .section-title { 
+      font-size: 14px; 
+      font-weight: bold; 
+      color: #4f46e5; 
+      margin-bottom: 10px; 
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 5px;
+    }
+    
+    .customer-info { display: flex; justify-content: space-between; }
+    .customer-box { width: 48%; }
+    .info-row { display: flex; margin-bottom: 5px; }
+    .info-label { font-weight: bold; width: 100px; color: #666; }
+    .info-value { flex: 1; }
+    
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    th { 
+      background: #f3f4f6; 
+      padding: 10px; 
+      text-align: left; 
+      font-weight: bold; 
+      font-size: 11px;
+      text-transform: uppercase;
+      color: #666;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    td { padding: 10px; border-bottom: 1px solid #e5e7eb; }
+    .text-right { text-align: right; }
+    
+    .totals { margin-left: auto; width: 250px; }
+    .total-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
+    .total-row.final { font-size: 16px; font-weight: bold; color: #4f46e5; border-bottom: 2px solid #4f46e5; }
+    
+    .footer { 
+      margin-top: 40px; 
+      padding-top: 20px; 
+      border-top: 1px solid #e5e7eb; 
+      text-align: center; 
+      color: #666; 
+      font-size: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="company-info">
+        <div class="company-name">ERP Aluminium</div>
+        <div>Kairouan Trik Haffouz</div>
+        <div>Tunisie</div>
+        <div>Tél: +216 29 772 644 / Fax: 77 276 268</div>
+      </div>
+      <div class="invoice-info">
+        <div class="invoice-number">Facture {{invoiceNumber}}</div>
+        <div class="invoice-date">Date: {{formatDate invoiceDate}}</div>
+        <div>Échéance: {{formatDate dueDate}}</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Client</div>
+      <div class="info-row"><span class="info-label">Nom:</span><span class="info-value">{{customer.companyName}}</span></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Détails Techniques de la Commande n° {{order.orderNumber}}</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Référence</th>
+            <th>Description</th>
+            <th class="text-right">Qté</th>
+            <th class="text-right">Lg (m)</th>
+            <th class="text-right">Poids (kg)</th>
+            <th class="text-right">Prix HT</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each order.quote.lines}}
+          <tr>
+            <td>{{profile.reference}}</td>
+            <td>{{profile.name}}</td>
+            <td class="text-right">{{#if quantity}}{{quantity}}{{else}}0{{/if}}</td>
+            <td class="text-right">{{#if unitLength}}{{unitLength}}{{else}}-{{/if}}</td>
+            <td class="text-right">{{#if totalWeight}}{{formatNumber totalWeight 3}}{{else}}0.000{{/if}}</td>
+            <td class="text-right">{{#if lineTotal}}{{formatNumber lineTotal 3}}{{else}}0.000{{/if}} DT</td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="totals">
+      <div class="total-row">
+        <span>Sous-total HT:</span>
+        <span>{{formatNumber subtotal 3}} DT</span>
+      </div>
+      <div class="total-row">
+        <span>TVA ({{vatRate}}%):</span>
+        <span>{{formatNumber vatAmount 3}} DT</span>
+      </div>
+      <div class="total-row final">
+        <span>Total TTC:</span>
+        <span>{{formatNumber total 3}} DT</span>
+      </div>
+    </div>
+    
+    `;
+  }
+
+  /**
+   * Get or compile the delivery note template
+   */
+  private async getDeliveryNoteTemplate(): Promise<HandlebarsTemplateDelegate> {
+    const templatePath = path.join(__dirname, '../templates/emails/delivery-note-pdf.hbs');
+    
+    if (this.templateCache.has('delivery-note')) {
+      return this.templateCache.get('delivery-note')!;
+    }
+
+    let templateSource: string;
+    if (fs.existsSync(templatePath)) {
+      templateSource = fs.readFileSync(templatePath, 'utf-8');
+    } else {
+      templateSource = this.getDefaultDeliveryNoteTemplate();
+    }
+
+    const template = Handlebars.compile(templateSource);
+    this.templateCache.set('delivery-note', template);
+    return template;
+  }
+
+  /**
+   * Get default delivery note PDF template
+   */
+  private getDefaultDeliveryNoteTemplate(): string {
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 12px; color: #333; }
+    .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+    
+    .header { display: flex; justify-content: space-between; margin-bottom: 30px; border-bottom: 2px solid #ea580c; padding-bottom: 20px; }
+    .company-info { font-size: 14px; }
+    .company-name { font-size: 24px; font-weight: bold; color: #ea580c; }
+    .bl-info { text-align: right; }
+    .bl-number { font-size: 18px; font-weight: bold; }
+    .bl-date { color: #666; }
+    
+    .section { margin-bottom: 25px; }
+    .section-title { 
+      font-size: 14px; 
+      font-weight: bold; 
+      color: #ea580c; 
+      margin-bottom: 10px; 
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 5px;
+    }
+    
+    .customer-info { display: flex; justify-content: space-between; }
+    .customer-box { width: 48%; }
+    .info-row { display: flex; margin-bottom: 5px; }
+    .info-label { font-weight: bold; width: 100px; color: #666; }
+    .info-value { flex: 1; }
+    
+    table { width: 100%; border-collapse: collapse; margin-bottom: 40px; }
+    th { 
+      background: #f3f4f6; 
+      padding: 10px; 
+      text-align: left; 
+      font-weight: bold; 
+      font-size: 11px;
+      text-transform: uppercase;
+      color: #666;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    td { padding: 10px; border-bottom: 1px solid #e5e7eb; }
+    .text-right { text-align: right; }
+    .text-center { text-align: center; }
+    
+    .signature-section { display: flex; justify-content: space-between; margin-top: 50px; }
+    .signature-box { width: 45%; border: 1px solid #e5e7eb; padding: 15px; border-radius: 8px; height: 120px; }
+    .signature-label { font-weight: bold; margin-bottom: 10px; text-decoration: underline; }
+    
+    .footer { 
+      margin-top: 40px; 
+      padding-top: 20px; 
+      border-top: 1px solid #e5e7eb; 
+      text-align: center; 
+      color: #666; 
+      font-size: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="company-info">
+        <div class="company-name">ERP Aluminium</div>
+        <div>Kairouan Trik Haffouz</div>
+        <div>Tunisie</div>
+        <div>Tél: +216 29 772 644 / Fax: 77 276 268</div>
+      </div>
+      <div class="bl-info">
+        <div class="bl-number">BON DE LIVRAISON</div>
+        <div>Réf Commande: {{orderNumber}}</div>
+        <div class="bl-date">Date de Sortie: {{formatDate currentDate}}</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Destinataire</div>
+      <div class="customer-info">
+        <div class="customer-box">
+          <div class="info-row"><span class="info-label">Client:</span><span class="info-value">{{customer.companyName}}</span></div>
+          <div class="info-row"><span class="info-label">Adresse:</span><span class="info-value">{{#if customer.shippingStreet}}{{customer.shippingStreet}}{{else}}{{customer.billingStreet}}{{/if}}</span></div>
+          <div class="info-row"><span class="info-label">Ville:</span><span class="info-value">{{#if customer.shippingCity}}{{customer.shippingCity}}{{else}}{{customer.billingCity}}{{/if}}</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Détails des Articles</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Référence</th>
+            <th>Désignation</th>
+            <th class="text-center">Qté</th>
+            <th class="text-right">Longueur (m)</th>
+            <th class="text-right">Poids (kg)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each lines}}
+          <tr>
+            <td>{{profile.reference}}</td>
+            <td>{{profile.name}}</td>
+            <td class="text-center">{{quantity}}</td>
+            <td class="text-right">{{unitLength}}</td>
+            <td class="text-right">{{formatNumber totalWeight 3}}</td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="signature-section">
+      <div class="signature-box">
+        <div class="signature-label">Le Chauffeur / Magasinier</div>
+      </div>
+      <div class="signature-box">
+        <div class="signature-label">Réceptionnaire (Nom & Signature)</div>
+        <p style="font-size: 9px; color: #666; margin-top: 50px;">Cachet obligatoire</p>
+      </div>
+    </div>
+    
+    <div class="footer">
+      <p>ERP Aluminium - Bon de livraison valant décharge de marchandises.</p>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+  }
+
+  /**
    * Format date for display
    */
-  private formatDate(date: string | Date): string {
+  private formatDate(date: any): string {
+    if (!date) return '-';
     const d = new Date(date);
-    return d.toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: 'long',
+    if (isNaN(d.getTime())) return '-';
+    return d.toLocaleDateString('fr-TN', {
       year: 'numeric',
+      month: 'long',
+      day: 'numeric',
     });
   }
 
   /**
    * Format number with specified decimals
    */
-  private formatNumber(value: number, decimals: number = 2): string {
-    return value.toFixed(decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  private formatNumber(value: any, decimals: number = 3): string {
+    const num = typeof value === 'string' ? parseFloat(value) : value;
+    if (isNaN(num) || num === null || num === undefined) return '0,000';
+    return num.toFixed(decimals).replace('.', ',');
   }
 
   /**
@@ -339,7 +696,7 @@ export class PdfService {
       subtotal: Number(quote.subtotal),
       discountPercent: Number(quote.discountPercent || 0),
       discountAmount: Number(quote.discountAmount || 0),
-      vatRate: Number(quote.vatRate || 20),
+      vatRate: Number(quote.vatRate || 19),
       vatAmount: Number(quote.vatAmount),
       total: Number(quote.total),
       notes: quote.notes,
@@ -363,8 +720,12 @@ export class PdfService {
       
       // Add helper functions
       const hbs = Handlebars;
-      hbs.registerHelper('formatDate', (date: string | Date) => this.formatDate(date));
-      hbs.registerHelper('formatNumber', (value: number, decimals: number) => this.formatNumber(value, decimals));
+      if (!hbs.helpers.formatDate) {
+        hbs.registerHelper('formatDate', (date: string | Date) => this.formatDate(date));
+      }
+      if (!hbs.helpers.formatNumber) {
+        hbs.registerHelper('formatNumber', (value: number, decimals: number) => this.formatNumber(value, decimals));
+      }
       
       // Render template
       const html = template(data);
@@ -385,6 +746,102 @@ export class PdfService {
       });
       
       return Buffer.from(pdf);
+    } finally {
+      await page.close();
+    }
+  }
+
+  /**
+   * Generate PDF for an invoice
+   */
+  async generateInvoicePdf(invoice: any): Promise<Buffer> {
+    const browser = await this.initBrowser();
+    const page = await browser.newPage();
+    
+    try {
+      logger.info(`Generating PDF for invoice: ${invoice.invoiceNumber}`);
+      const template = await this.getInvoiceTemplate();
+      
+      const hbs = Handlebars;
+      if (!hbs.helpers.formatDate) {
+        hbs.registerHelper('formatDate', (date: string | Date) => this.formatDate(date));
+      }
+      if (!hbs.helpers.formatNumber) {
+        hbs.registerHelper('formatNumber', (value: number, decimals: number) => this.formatNumber(value, decimals));
+      }
+      
+      // Convert TypeORM entity to plain object to avoid Handlebars issues
+      const plainInvoice = JSON.parse(JSON.stringify(invoice));
+      
+      const html = template(plainInvoice);
+      await page.setContent(html, { waitUntil: 'domcontentloaded' });
+      
+      const pdf = await page.pdf({
+        format: 'A4',
+        printBackground: true,
+        margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' },
+      });
+      
+      logger.info(`PDF generated successfully for invoice: ${invoice.invoiceNumber}`);
+      return Buffer.from(pdf);
+    } catch (error) {
+      logger.error(`Error generating invoice PDF: ${invoice.invoiceNumber}`, { error: (error as Error).message });
+      throw error;
+    } finally {
+      await page.close();
+    }
+  }
+
+  /**
+   * Generate PDF for a delivery note (BL)
+   */
+  async generateDeliveryNotePdf(order: any): Promise<Buffer> {
+    const browser = await this.initBrowser();
+    const page = await browser.newPage();
+    
+    try {
+      logger.info(`Generating delivery note for order: ${order.orderNumber}`);
+      const template = await this.getDeliveryNoteTemplate();
+      
+      const hbs = Handlebars;
+      if (!hbs.helpers.formatDate) {
+        hbs.registerHelper('formatDate', (date: string | Date) => this.formatDate(date));
+      }
+      if (!hbs.helpers.formatNumber) {
+        hbs.registerHelper('formatNumber', (value: number, decimals: number) => this.formatNumber(value, decimals));
+      }
+      
+      // Prepare data
+      const data = {
+        orderNumber: order.orderNumber,
+        currentDate: new Date(),
+        customer: order.customer,
+        lines: (order.quote?.lines || []).map((line: any) => ({
+          profile: {
+            reference: line.profile?.reference || 'N/A',
+            name: line.profile?.name || line.description || 'N/A',
+          },
+          quantity: line.quantity,
+          unitLength: Number(line.unitLength),
+          totalWeight: Number(line.totalWeight || line.weightKg || 0),
+        })),
+        notes: order.notes
+      };
+      
+      const html = template(data);
+      await page.setContent(html, { waitUntil: 'domcontentloaded' });
+      
+      const pdf = await page.pdf({
+        format: 'A4',
+        printBackground: true,
+        margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' },
+      });
+      
+      logger.info(`Delivery note generated successfully for order: ${order.orderNumber}`);
+      return Buffer.from(pdf);
+    } catch (error) {
+      logger.error(`Error generating delivery note: ${order.orderNumber}`, { error: (error as Error).message });
+      throw error;
     } finally {
       await page.close();
     }

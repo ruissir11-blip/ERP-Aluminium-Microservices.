@@ -28,16 +28,13 @@ import RootCauseAnalysis from './pages/quality/RootCauseAnalysis';
 import MaintenanceDashboard from './pages/maintenance/MaintenanceDashboard';
 import Machines from './pages/maintenance/Machines';
 import WorkOrders from './pages/maintenance/WorkOrders';
-import MaintenancePlans from './pages/maintenance/MaintenancePlans';
-import MaintenanceCalendar from './pages/maintenance/MaintenanceCalendar';
 import MaintenanceMetrics from './pages/maintenance/MaintenanceMetrics';
-import MaintenanceCosts from './pages/maintenance/MaintenanceCosts';
 import BIDashboard from './pages/bi/BIDashboard';
 
 // HR pages
 import EmployeeList from './pages/hr/EmployeeList';
 import HRDashboard from './pages/hr/HRDashboard';
-import DepartmentList from './pages/hr/DepartmentList';
+// DepartmentList merged into EmployeeList (tabs)
 import LeaveList from './pages/hr/LeaveList';
 import AttendanceList from './pages/hr/AttendanceList';
 import ContractList from './pages/hr/ContractList';
@@ -53,9 +50,8 @@ import AIStockout from './pages/ai/AIStockout';
 import ROICalculator from './pages/comptabilite/ROICalculator';
 import ProductCosts from './pages/comptabilite/ProductCosts';
 import FinancialDashboard from './pages/comptabilite/FinancialDashboard';
-import CommercialPerformance from './pages/comptabilite/CommercialPerformance';
-import CustomerProfitability from './pages/comptabilite/CustomerProfitability';
-import CostConfiguration from './pages/comptabilite/CostConfiguration';
+
+import PayrollCalculation from './pages/comptabilite/PayrollCalculation';
 
 // Report pages
 import StockLevelsReport from './pages/reports/StockLevelsReport';
@@ -63,7 +59,6 @@ import StockMovementsReport from './pages/reports/StockMovementsReport';
 import InventoryResultsReport from './pages/reports/InventoryResultsReport';
 import StockAlertsReport from './pages/reports/StockAlertsReport';
 import MaintenanceDashboardReport from './pages/reports/MaintenanceDashboardReport';
-import MaintenanceCostsReport from './pages/reports/MaintenanceCostsReport';
 import MaintenanceMetricsReport from './pages/reports/MaintenanceMetricsReport';
 import WorkOrdersReport from './pages/reports/WorkOrdersReport';
 import QualityDashboardReport from './pages/reports/QualityDashboardReport';
@@ -111,10 +106,7 @@ const routePermissions: Record<string, RouteRoles> = {
   '/maintenance': ['ADMIN', 'MAINTENANCE_RESPONSIBLE'],
   '/maintenance/machines': ['ADMIN', 'MAINTENANCE_RESPONSIBLE'],
   '/maintenance/work-orders': ['ADMIN', 'MAINTENANCE_RESPONSIBLE'],
-  '/maintenance/plans': ['ADMIN', 'MAINTENANCE_RESPONSIBLE'],
-  '/maintenance/calendar': ['ADMIN', 'MAINTENANCE_RESPONSIBLE'],
   '/maintenance/metrics': ['ADMIN', 'MAINTENANCE_RESPONSIBLE'],
-  '/maintenance/costs': ['ADMIN', 'MAINTENANCE_RESPONSIBLE'],
   
   // HR - accessible by ADMIN and RH_RESPONSIBLE, plus COMPTABLE for payslips
   '/hr': ['ADMIN', 'RH_RESPONSIBLE'],
@@ -131,13 +123,11 @@ const routePermissions: Record<string, RouteRoles> = {
   '/ai/production-schedule': ['ADMIN'],
   '/ai/stockout': ['ADMIN', 'STOCK_RESPONSIBLE'],
   
-  // Comptabilité - accessible by ADMIN and COMPTABLE
-  '/comptabilite/roi': ['ADMIN', 'COMPTABLE'],
-  '/comptabilite/product-costs': ['ADMIN', 'COMPTABLE'],
-  '/comptabilite/financial-dashboard': ['ADMIN', 'COMPTABLE'],
-  '/comptabilite/commercial-performance': ['ADMIN', 'COMPTABLE'],
-  '/comptabilite/customer-profitability': ['ADMIN', 'COMPTABLE'],
-  '/comptabilite/cost-configuration': ['ADMIN', 'COMPTABLE'],
+// Comptabilité - accessible by ADMIN and COMPTABLE
+   '/comptabilite/roi': ['ADMIN', 'COMPTABLE'],
+   '/comptabilite/product-costs': ['ADMIN', 'COMPTABLE'],
+   '/comptabilite/financial-dashboard': ['ADMIN', 'COMPTABLE'],
+   '/comptabilite/payroll-calculation': ['ADMIN', 'COMPTABLE'],
   
   // Stock Reports
   '/reports/stock-levels': ['ADMIN'],
@@ -354,24 +344,9 @@ const App: React.FC = () => {
             <WorkOrders />
           </ProtectedRouteWithRoles>
         } />
-        <Route path="/maintenance/plans" element={
-          <ProtectedRouteWithRoles path="/maintenance/plans">
-            <MaintenancePlans />
-          </ProtectedRouteWithRoles>
-        } />
-        <Route path="/maintenance/calendar" element={
-          <ProtectedRouteWithRoles path="/maintenance/calendar">
-            <MaintenanceCalendar />
-          </ProtectedRouteWithRoles>
-        } />
         <Route path="/maintenance/metrics" element={
           <ProtectedRouteWithRoles path="/maintenance/metrics">
             <MaintenanceMetrics />
-          </ProtectedRouteWithRoles>
-        } />
-        <Route path="/maintenance/costs" element={
-          <ProtectedRouteWithRoles path="/maintenance/costs">
-            <MaintenanceCosts />
           </ProtectedRouteWithRoles>
         } />
         
@@ -386,11 +361,7 @@ const App: React.FC = () => {
             <EmployeeList />
           </ProtectedRouteWithRoles>
         } />
-        <Route path="/hr/departments" element={
-          <ProtectedRouteWithRoles path="/hr/departments">
-            <DepartmentList />
-          </ProtectedRouteWithRoles>
-        } />
+        <Route path="/hr/departments" element={<Navigate to="/hr/employees" replace />} />
         <Route path="/hr/leave" element={
           <ProtectedRouteWithRoles path="/hr/leave">
             <LeaveList />
@@ -450,19 +421,10 @@ const App: React.FC = () => {
             <FinancialDashboard />
           </ProtectedRouteWithRoles>
         } />
-        <Route path="/comptabilite/commercial-performance" element={
-          <ProtectedRouteWithRoles path="/comptabilite/commercial-performance">
-            <CommercialPerformance />
-          </ProtectedRouteWithRoles>
-        } />
-        <Route path="/comptabilite/customer-profitability" element={
-          <ProtectedRouteWithRoles path="/comptabilite/customer-profitability">
-            <CustomerProfitability />
-          </ProtectedRouteWithRoles>
-        } />
-        <Route path="/comptabilite/cost-configuration" element={
-          <ProtectedRouteWithRoles path="/comptabilite/cost-configuration">
-            <CostConfiguration />
+
+        <Route path="/comptabilite/payroll-calculation" element={
+          <ProtectedRouteWithRoles path="/comptabilite/payroll-calculation">
+            <PayrollCalculation />
           </ProtectedRouteWithRoles>
         } />
         
@@ -492,11 +454,6 @@ const App: React.FC = () => {
         <Route path="/reports/maintenance-dashboard" element={
           <ProtectedRouteWithRoles path="/reports/maintenance-dashboard">
             <MaintenanceDashboardReport />
-          </ProtectedRouteWithRoles>
-        } />
-        <Route path="/reports/maintenance-costs" element={
-          <ProtectedRouteWithRoles path="/reports/maintenance-costs">
-            <MaintenanceCostsReport />
           </ProtectedRouteWithRoles>
         } />
         <Route path="/reports/maintenance-metrics" element={

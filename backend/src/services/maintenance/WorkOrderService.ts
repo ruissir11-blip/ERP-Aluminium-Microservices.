@@ -7,7 +7,6 @@ import { Machine, MachineStatus } from '../../models/maintenance/Machine';
 
 export interface CreateWorkOrderInput {
   machineId: string;
-  maintenancePlanId?: string;
   type: WorkOrderType;
   priority?: WorkOrderPriority;
   title: string;
@@ -148,7 +147,6 @@ export class WorkOrderService {
     const workOrder = this.workOrderRepository.create({
       workOrderNumber: woNumber,
       machineId: input.machineId,
-      maintenancePlanId: input.maintenancePlanId,
       type: input.type,
       priority: input.priority || WorkOrderPriority.ROUTINE,
       title: input.title,

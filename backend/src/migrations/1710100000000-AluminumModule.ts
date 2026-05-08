@@ -23,7 +23,7 @@ export class AluminumModule1710100000000 implements MigrationInterface {
           { name: 'billing_street', type: 'varchar', length: '255' },
           { name: 'billing_city', type: 'varchar', length: '100' },
           { name: 'billing_postal_code', type: 'varchar', length: '20' },
-          { name: 'billing_country', type: 'varchar', length: '100', default: "'France'" },
+          { name: 'billing_country', type: 'varchar', length: '100', default: "'Tunisie'" },
           { name: 'shipping_street', type: 'varchar', length: '255', isNullable: true },
           { name: 'shipping_city', type: 'varchar', length: '100', isNullable: true },
           { name: 'shipping_postal_code', type: 'varchar', length: '20', isNullable: true },

@@ -11,8 +11,21 @@ export class AuthController {
   private userRepository = AppDataSource.getRepository(User);
 
   constructor() {
-    this.authService = new AuthService();
+    try {
+      this.authService = new AuthService();
+    } catch (serviceError) {
+      logger.error('AuthService initialization failed', { error: (serviceError as Error).message });
+      // Service will be lazily initialized on first request
+      this.authService = null as unknown as AuthService;
+    }
     this.mfaService = new MfaService();
+  }
+
+  private getAuthService(): AuthService {
+    if (!this.authService) {
+      this.authService = new AuthService();
+    }
+    return this.authService;
   }
 
   register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -30,7 +43,8 @@ export class AuthController {
         return;
       }
 
-      const result = await this.authService.register({
+      const authService = this.getAuthService();
+      const result = await authService.register({
         email,
         password,
         firstName,
@@ -98,7 +112,8 @@ export class AuthController {
         return;
       }
 
-      const result = await this.authService.login({
+      const authService = this.getAuthService();
+      const result = await authService.login({
         email,
         password,
         ipAddress: req.ip,
@@ -180,7 +195,8 @@ export class AuthController {
       const token = authHeader.substring(7);
       const userId = (req as Request & { user?: { id: string } }).user?.id;
 
-      await this.authService.logout(userId || '', token);
+      const authService = this.getAuthService();
+      await authService.logout(userId || '', token);
 
       res.status(200).json({
         success: true,
@@ -209,7 +225,8 @@ export class AuthController {
         return;
       }
 
-      const tokens = await this.authService.refreshToken(refreshToken);
+      const authService = this.getAuthService();
+      const tokens = await authService.refreshToken(refreshToken);
 
       res.status(200).json({
         success: true,
@@ -243,7 +260,8 @@ export class AuthController {
         return;
       }
 
-      await this.authService.requestPasswordReset(email);
+      const authService = this.getAuthService();
+      await authService.requestPasswordReset(email);
 
       // Always return success to prevent email enumeration
       res.status(200).json({
@@ -273,7 +291,8 @@ export class AuthController {
         return;
       }
 
-      await this.authService.resetPassword(token, newPassword);
+      const authService = this.getAuthService();
+      await authService.resetPassword(token, newPassword);
 
       res.status(200).json({
         success: true,
@@ -526,7 +545,8 @@ export class AuthController {
         return;
       }
 
-      const result = await this.authService.verifyMfaLogin(tempToken, token);
+      const authService = this.getAuthService();
+      const result = await authService.verifyMfaLogin(tempToken, token);
 
       res.status(200).json({
         success: true,

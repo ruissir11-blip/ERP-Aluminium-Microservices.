@@ -7,7 +7,6 @@ import { AluminumProfile, ProfileType } from '../models/aluminium/AluminumProfil
 import { Customer } from '../models/aluminium/Customer';
 import { Machine, MachineStatus } from '../models/maintenance/Machine';
 import { WorkOrder, WorkOrderType, WorkOrderStatus, WorkOrderPriority } from '../models/maintenance/WorkOrder';
-import { MaintenancePlan, MaintenanceFrequency } from '../models/maintenance/MaintenancePlan';
 import { Warehouse } from '../models/stock/Warehouse';
 import { StorageLocation } from '../models/stock/StorageLocation';
 
@@ -22,7 +21,6 @@ async function seedMockData() {
     const customerRepository = AppDataSource.getRepository(Customer);
     const machineRepository = AppDataSource.getRepository(Machine);
     const workOrderRepository = AppDataSource.getRepository(WorkOrder);
-    const maintenancePlanRepository = AppDataSource.getRepository(MaintenancePlan);
     const warehouseRepository = AppDataSource.getRepository(Warehouse);
     const locationRepository = AppDataSource.getRepository(StorageLocation);
 
@@ -67,6 +65,7 @@ async function seedMockData() {
       { email: 'maintenance@erp-aluminium.local', firstName: 'Jacques', lastName: 'Moreau', role: 'maintenance_responsible', password: 'Maintenance@12345678!' },
     ];
 
+    let adminUser: User | null = null;
     for (const userData of testUsers) {
       let existingUser = await userRepository.findOne({ where: { email: userData.email } });
       if (!existingUser) {
@@ -82,6 +81,11 @@ async function seedMockData() {
         });
         await userRepository.save(user);
         console.log(`✓ Created user: ${userData.email} (${userData.role})`);
+        if (userData.role === 'admin') {
+          adminUser = user;
+        }
+      } else if (userData.role === 'admin') {
+        adminUser = existingUser;
       }
     }
 
@@ -162,7 +166,7 @@ async function seedMockData() {
           billingStreet: '123 Rue de la Métallurgie',
           billingCity: 'Paris',
           billingPostalCode: '75001',
-          billingCountry: 'France',
+          billingCountry: 'Tunisie',
           contactName: 'Jean Dupont',
           isActive: true,
         },
@@ -170,23 +174,23 @@ async function seedMockData() {
           code: 'CUST-002',
           companyName: 'Constructions Métalliques du Sud',
           email: 'info@cms-construction.com',
-          phone: '+33 4 91 23 45 67',
-          billingStreet: '456 Avenue de l\'Industrie',
-          billingCity: 'Marseille',
-          billingPostalCode: '13001',
-          billingCountry: 'France',
+          phone: '+216 22 123 456',
+          billingStreet: 'Zone Industrielle',
+          billingCity: 'Sousse',
+          billingPostalCode: '4000',
+          billingCountry: 'Tunisie',
           contactName: 'Marie Martin',
           isActive: true,
         },
         {
           code: 'CUST-003',
           companyName: 'Menuiserie Aluminium Pro',
-          email: 'contact@menuiserie-pro.fr',
-          phone: '+33 2 40 12 34 56',
-          billingStreet: '789 Rue des Artisans',
-          billingCity: 'Nantes',
-          billingPostalCode: '44000',
-          billingCountry: 'France',
+          email: 'contact@menuiserie-pro.tn',
+          phone: '+216 29 772 644',
+          billingStreet: 'Trik Haffouz',
+          billingCity: 'Kairouan',
+          billingPostalCode: '3100',
+          billingCountry: 'Tunisie',
           contactName: 'Pierre Durant',
           isActive: true,
         },
@@ -202,20 +206,20 @@ async function seedMockData() {
       const warehouses = [
         {
           code: 'WH-001',
-          name: 'Entrepôt Principal',
-          address: 'Zone Industrielle, 69001 Lyon',
-          contactName: 'Jean Claude',
-          contactEmail: 'jc@erp.local',
-          contactPhone: '+33 4 78 00 00 00',
+          name: 'Entrepôt Kairouan',
+          address: 'Trik Haffouz, 3100 Kairouan',
+          contactName: 'Ahmed Mansour',
+          contactEmail: 'ahmed@erp.local',
+          contactPhone: '+216 77 276 268',
           isActive: true,
         },
         {
           code: 'WH-002',
-          name: 'Magasin Paris',
-          address: '15 Rue de la Garde, 93000 Bobigny',
-          contactName: 'Marie Louise',
-          contactEmail: 'ml@erp.local',
-          contactPhone: '+33 1 48 00 00 00',
+          name: 'Dépôt Tunis',
+          address: 'Zone Industrielle Megrine, Tunis',
+          contactName: 'Sami Ben Ali',
+          contactEmail: 'sami@erp.local',
+          contactPhone: '+216 71 000 000',
           isActive: true,
         },
       ];
@@ -317,26 +321,6 @@ async function seedMockData() {
       console.log(`✓ Created ${machines.length} machines`);
     }
 
-    // Create Maintenance Plans
-    const existingPlans = await maintenancePlanRepository.count();
-    if (existingPlans === 0) {
-      const machines = await machineRepository.find();
-      
-      const maintenancePlans = machines.slice(0, 3).map((machine, index) => ({
-        machine,
-        description: `Plan de maintenance ${index + 1} pour ${machine.designation}`,
-        taskType: index === 0 ? 'PREVENTIVE' : index === 1 ? 'CORRECTIVE' : 'PREDICTIVE',
-        frequency: index === 0 ? MaintenanceFrequency.MONTHLY : index === 1 ? MaintenanceFrequency.QUARTERLY : MaintenanceFrequency.WEEKLY,
-        frequencyDays: index === 0 ? 30 : index === 1 ? 90 : 7,
-        estimatedDurationHours: 2 + index,
-        nextDueDate: new Date(Date.now() + (index + 1) * 7 * 24 * 60 * 60 * 1000),
-        isActive: true,
-      }));
-
-      await maintenancePlanRepository.save(maintenancePlans);
-      console.log(`✓ Created ${maintenancePlans.length} maintenance plans`);
-    }
-
     // Create Work Orders
     const existingWorkOrders = await workOrderRepository.count();
     if (existingWorkOrders === 0) {
@@ -357,8 +341,8 @@ async function seedMockData() {
           title: 'Maintenance préventive CNC Falès 1',
           description: 'Vérification générale et graissage des axes',
           scheduledDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          assignedTo: adminUser.id,
-          createdBy: adminUser.id,
+          assignedTo: adminUser!.id,
+          createdBy: adminUser!.id,
         });
 
         // Add more work orders only if we have enough machines
@@ -373,8 +357,8 @@ async function seedMockData() {
             description: 'Remplacement des joints d\'étanchéité',
             scheduledDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
             actualStartDatetime: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-            assignedTo: adminUser.id,
-            createdBy: adminUser.id,
+            assignedTo: adminUser!.id,
+            createdBy: adminUser!.id,
           });
         }
 
@@ -388,8 +372,8 @@ async function seedMockData() {
             title: 'Réparation Machine de Traitement',
             description: 'Panne moteur principal - diagnostic et réparation',
             scheduledDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-            assignedTo: adminUser.id,
-            createdBy: adminUser.id,
+            assignedTo: adminUser!.id,
+            createdBy: adminUser!.id,
           });
         }
 
@@ -406,8 +390,8 @@ async function seedMockData() {
             actualStartDatetime: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
             actualEndDatetime: new Date(Date.now() - 13 * 24 * 60 * 60 * 1000),
             closedAt: new Date(Date.now() - 13 * 24 * 60 * 60 * 1000),
-            assignedTo: adminUser.id,
-            createdBy: adminUser.id,
+            assignedTo: adminUser!.id,
+            createdBy: adminUser!.id,
             completionNotes: 'Maintenance terminée avec succès',
           });
         }

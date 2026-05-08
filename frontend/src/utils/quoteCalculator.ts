@@ -157,7 +157,7 @@ export function calculateQuoteTotals(
     lineDiscount?: number;
   }>,
   discountPercent: number = 0,
-  vatRate: number = 20
+  vatRate: number = 19
 ): QuoteTotals {
   // Calculate subtotal
   const subtotal = lines.reduce((sum, line) => {
@@ -189,8 +189,8 @@ export function calculateQuoteTotals(
 /**
  * Format currency for display
  */
-export function formatCurrency(value: number, currency: string = '€'): string {
-  return `${currency}${value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}`;
+export function formatCurrency(value: number, currency: string = 'DT'): string {
+  return `${value.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} ${currency}`;
 }
 
 /**

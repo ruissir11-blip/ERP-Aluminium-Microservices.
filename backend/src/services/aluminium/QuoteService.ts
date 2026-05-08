@@ -53,9 +53,8 @@ export class QuoteService {
       // Use pessimistic lock to prevent concurrent number generation
       const lastQuote = await manager
         .createQueryBuilder(Quote, 'quote')
-        .setLock('pessimistic_write')
-        .where('quote.quote_number LIKE :prefix', { prefix: `${prefix}%` })
-        .orderBy('quote.quote_number', 'DESC')
+        .where('quote.quoteNumber LIKE :prefix', { prefix: `${prefix}%` })
+        .orderBy('quote.quoteNumber', 'DESC')
         .getOne();
 
       let sequence = 1;
@@ -81,7 +80,7 @@ export class QuoteService {
       status: QuoteStatus.BROUILLON,
       validUntil,
       discountPercent: input.discountPercent || 0,
-      vatRate: input.vatRate || 20,
+      vatRate: input.vatRate || 19,
       notes: input.notes,
       customerNotes: input.customerNotes,
       subtotal: 0,
@@ -361,7 +360,6 @@ export class QuoteService {
       // Fetch quote within transaction with lock
       const quote = await manager
         .createQueryBuilder(Quote, 'quote')
-        .setLock('pessimistic_write')
         .leftJoinAndSelect('quote.lines', 'lines')
         .where('quote.id = :quoteId', { quoteId })
         .getOne();
@@ -370,8 +368,8 @@ export class QuoteService {
         throw new Error('Quote not found');
       }
 
-      if (quote.status !== QuoteStatus.ACCEPTÉ) {
-        throw new Error('Quote must be accepted before conversion');
+      if (quote.status !== QuoteStatus.ACCEPTÉ && quote.status !== QuoteStatus.ENVOYÉ) {
+        throw new Error(`Le devis doit être accepté ou envoyé avant la conversion (statut actuel: ${quote.status})`);
       }
 
       // Check if already converted
@@ -383,21 +381,24 @@ export class QuoteService {
 
       const order = manager.create(CustomerOrder, {
         orderNumber,
-        quoteId,
+        quote: quote,
         customerId: quote.customerId,
         commercialId: quote.commercialId,
         status: OrderStatus.EN_ATTENTE,
         subtotal: quote.subtotal,
+        discountPercent: quote.discountPercent,
         discountAmount: quote.discountAmount,
+        vatRate: quote.vatRate,
         vatAmount: quote.vatAmount,
         total: quote.total,
       });
 
       const savedOrder = await manager.save(order);
 
-      // Update quote with order reference
+      // Update quote with order reference and change status
       await manager.update(Quote, quoteId, { 
-        convertedToOrderId: savedOrder.id 
+        convertedToOrderId: savedOrder.id,
+        status: QuoteStatus.CONVERTED // Explicitly change status
       });
 
       return savedOrder;
@@ -423,16 +424,19 @@ export class QuoteService {
     
     // Use pessimistic lock to prevent concurrent number generation
     const lastOrder = await manager
-      .createQueryBuilder(CustomerOrder, 'order')
-      .setLock('pessimistic_write')
-      .where('order.order_number LIKE :prefix', { prefix: `${prefix}%` })
-      .orderBy('order.order_number', 'DESC')
+      .createQueryBuilder(CustomerOrder, 'co')
+      .where('co.orderNumber LIKE :prefix', { prefix: `${prefix}%` })
+      .orderBy('co.orderNumber', 'DESC')
       .getOne();
 
     let sequence = 1;
-    if (lastOrder) {
-      const lastSequence = parseInt(lastOrder.orderNumber.split('-')[2], 10);
-      sequence = lastSequence + 1;
+    if (lastOrder && lastOrder.orderNumber) {
+      const parts = lastOrder.orderNumber.split('-');
+      const lastSequenceStr = parts[parts.length - 1];
+      const lastSequence = parseInt(lastSequenceStr, 10);
+      if (!isNaN(lastSequence)) {
+        sequence = lastSequence + 1;
+      }
     }
 
     return `${prefix}${sequence.toString().padStart(5, '0')}`;

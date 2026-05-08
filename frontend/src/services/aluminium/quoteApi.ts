@@ -78,6 +78,11 @@ export const quoteApi = {
   convertToOrder: (quoteId: string) => {
     return api.post<{ data: CustomerOrder }>(`/quotes/${quoteId}/convert`);
   },
+
+  // Generate PDF for quote
+  generatePdf: (quoteId: string) => {
+    return api.get(`/quotes/${quoteId}/pdf`, { responseType: 'blob' });
+  },
 };
 
 export default quoteApi;

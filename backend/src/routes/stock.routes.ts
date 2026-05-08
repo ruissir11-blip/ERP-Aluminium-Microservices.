@@ -6,8 +6,12 @@ import { StockMovementController } from '../controllers/stock/StockMovementContr
 import { StockAlertController } from '../controllers/stock/StockAlertController';
 import { LotController } from '../controllers/stock/LotController';
 import { InventoryCountController } from '../controllers/stock/InventoryCountController';
+import { authenticate } from '../middleware/auth';
 
 const router = Router();
+
+// Apply authentication to all stock routes
+router.use(authenticate);
 
 // Initialize controllers
 const warehouseController = new WarehouseController();
@@ -53,24 +57,24 @@ router.post('/inventory/:id/transfer', inventoryController.transfer.bind(invento
 // ===================
 // MOVEMENT ROUTES
 // ===================
-router.get('/stock-movements', movementController.list.bind(movementController));
-router.post('/stock-movements', movementController.create.bind(movementController));
-router.get('/stock-movements/:id', movementController.getById.bind(movementController));
-router.get('/stock-movements/history/:profileId/:warehouseId', movementController.getHistory.bind(movementController));
-router.get('/stock-movements/summary/:profileId/:warehouseId', movementController.getSummary.bind(movementController));
-router.get('/stock-movements/rotation/:profileId', movementController.getRotation.bind(movementController));
+router.get('/movements', movementController.list.bind(movementController));
+router.post('/movements', movementController.create.bind(movementController));
+router.get('/movements/:id', movementController.getById.bind(movementController));
+router.get('/movements/history/:profileId/:warehouseId', movementController.getHistory.bind(movementController));
+router.get('/movements/summary/:profileId/:warehouseId', movementController.getSummary.bind(movementController));
+router.get('/movements/rotation/:profileId', movementController.getRotation.bind(movementController));
 
 // ===================
 // ALERT ROUTES
 // ===================
-router.get('/stock-alerts', alertController.list.bind(alertController));
-router.get('/stock-alerts/active', alertController.getActive.bind(alertController));
-router.get('/stock-alerts/:id', alertController.getById.bind(alertController));
-router.post('/stock-alerts', alertController.create.bind(alertController));
-router.put('/stock-alerts/:id', alertController.update.bind(alertController));
-router.delete('/stock-alerts/:id', alertController.deactivate.bind(alertController));
-router.post('/stock-alerts/:id/acknowledge', alertController.acknowledge.bind(alertController));
-router.post('/stock-alerts/check', alertController.checkAlerts.bind(alertController));
+router.get('/alerts', alertController.list.bind(alertController));
+router.get('/alerts/active', alertController.getActive.bind(alertController));
+router.get('/alerts/:id', alertController.getById.bind(alertController));
+router.post('/alerts', alertController.create.bind(alertController));
+router.put('/alerts/:id', alertController.update.bind(alertController));
+router.delete('/alerts/:id', alertController.deactivate.bind(alertController));
+router.post('/alerts/:id/acknowledge', alertController.acknowledge.bind(alertController));
+router.post('/alerts/check', alertController.checkAlerts.bind(alertController));
 
 // ===================
 // LOT ROUTES

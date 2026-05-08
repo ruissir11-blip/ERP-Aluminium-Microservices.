@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
 import { dataSource } from '../../config/database';
-import { Employee } from '../../models/hr/Employee';
-import { EmployeeContract } from '../../models/hr/EmployeeContract';
+import { Employee, EmployeeStatus } from '../../models/hr/Employee';
+import { EmployeeContract, ContractStatus } from '../../models/hr/EmployeeContract';
 import { Attendance } from '../../models/hr/Attendance';
-import { LeaveRequest } from '../../models/hr/LeaveRequest';
+import { LeaveRequest, LeaveStatus } from '../../models/hr/LeaveRequest';
 import { Payslip, PayslipStatus } from '../../models/hr/Payslip';
 import { Between, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 
@@ -78,7 +78,7 @@ class PayslipController {
 
       // Get active contract
       const contract = await dataSource.getRepository(EmployeeContract).findOne({
-        where: { employeeId, status: 'ACTIVE' },
+        where: { employeeId, status: ContractStatus.ACTIVE },
         order: { startDate: 'DESC' },
       });
 
@@ -93,7 +93,7 @@ class PayslipController {
       const attendances = await dataSource.getRepository(Attendance).find({
         where: {
           employeeId,
-          attendanceDate: Between(startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]),
+          attendanceDate: Between(startDate, endDate),
         },
       });
 
@@ -109,9 +109,9 @@ class PayslipController {
       const leaveRequests = await dataSource.getRepository(LeaveRequest).find({
         where: {
           employeeId,
-          status: 'APPROVED',
-          startDate: LessThanOrEqual(endDate.toISOString().split('T')[0]),
-          endDate: MoreThanOrEqual(startDate.toISOString().split('T')[0]),
+          status: LeaveStatus.APPROVED,
+          startDate: LessThanOrEqual(endDate),
+          endDate: MoreThanOrEqual(startDate),
         },
       });
 
@@ -242,7 +242,7 @@ class PayslipController {
 
       // Get all active employees
       const employees = await dataSource.getRepository(Employee).find({
-        where: { status: 'ACTIVE' },
+        where: { status: EmployeeStatus.ACTIVE },
       });
 
       const results = [];
@@ -250,7 +250,7 @@ class PayslipController {
         try {
           // Get active contract
           const contract = await dataSource.getRepository(EmployeeContract).findOne({
-            where: { employeeId: employee.id, status: 'ACTIVE' },
+            where: { employeeId: employee.id, status: ContractStatus.ACTIVE },
           });
 
           if (!contract) continue;
@@ -262,7 +262,7 @@ class PayslipController {
           const attendances = await dataSource.getRepository(Attendance).find({
             where: {
               employeeId: employee.id,
-              attendanceDate: Between(startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]),
+              attendanceDate: Between(startDate, endDate),
             },
           });
 

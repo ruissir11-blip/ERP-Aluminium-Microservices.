@@ -19,4 +19,10 @@ router.post('/', (req, res) => orderController.create(req, res));
 // PATCH /api/v1/orders/:id/status - Update order status
 router.patch('/:id/status', (req, res) => orderController.updateStatus(req, res));
 
+// PATCH /api/v1/orders/:id - Update order details
+router.patch('/:id', (req, res) => orderController.update(req, res));
+
+// GET /api/v1/orders/:id/delivery-note - Generate BL PDF
+router.get('/:id/delivery-note', (req, res) => orderController.downloadDeliveryNote(req, res));
+
 export default router;

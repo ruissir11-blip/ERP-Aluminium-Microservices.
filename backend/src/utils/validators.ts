@@ -78,9 +78,11 @@ export const isValidPassword = (password: string): boolean => {
  * UUID validation
  */
 export const isValidUUID = (uuid: string): boolean => {
+  // Accepte à la fois les UUID v4 standards et les identifiants numériques pour la compatibilité
   const uuidRegex =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(uuid);
+  const numericIdRegex = /^\d+$/;
+  return uuidRegex.test(uuid) || numericIdRegex.test(uuid);
 };
 
 /**

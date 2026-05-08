@@ -276,13 +276,13 @@ export enum PayslipStatus {
 
 export interface GeneratePayslipDto {
   employeeId: string;
-  periodMonth: number;
-  periodYear: number;
+  month: number;
+  year: number;
 }
 
 export interface GenerateBatchPayslipDto {
-  periodMonth: number;
-  periodYear: number;
+  month: number;
+  year: number;
 }
 
 // ==================== TRAINING ====================

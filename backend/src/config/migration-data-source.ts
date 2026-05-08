@@ -17,7 +17,6 @@ import { Quote } from '../models/aluminium/Quote';
 import { QuoteLine } from '../models/aluminium/QuoteLine';
 import { Machine } from '../models/maintenance/Machine';
 import { MachineDocument } from '../models/maintenance/MachineDocument';
-import { MaintenancePlan } from '../models/maintenance/MaintenancePlan';
 import { WorkOrder } from '../models/maintenance/WorkOrder';
 import { WorkOrderPart } from '../models/maintenance/WorkOrderPart';
 import { BreakdownRecord } from '../models/maintenance/BreakdownRecord';
@@ -91,7 +90,6 @@ export default new DataSource({
     QuoteLine,
     Machine,
     MachineDocument,
-    MaintenancePlan,
     WorkOrder,
     WorkOrderPart,
     BreakdownRecord,

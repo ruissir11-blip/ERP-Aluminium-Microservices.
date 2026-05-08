@@ -25,21 +25,19 @@ const CustomerList: React.FC = () => {
     billingStreet: '',
     billingCity: '',
     billingPostalCode: '',
-    billingCountry: 'France',
+    billingCountry: 'Tunisie',
     shippingStreet: '',
     shippingCity: '',
     shippingPostalCode: '',
-    shippingCountry: 'France',
+    shippingCountry: 'Tunisie',
     paymentTerms: '',
     vatNumber: '',
   });
   const [formError, setFormError] = useState('');
 
-  // Initial load - set empty data for now
   useEffect(() => {
-    // API call disabled for testing - just show empty state
-    setLoading(false);
-  }, []);
+    fetchCustomers();
+  }, [currentPage, searchTerm]);
 
   // Handle search changes - reset to page 1
   const handleSearchChange = (value: string) => {
@@ -157,11 +155,11 @@ const CustomerList: React.FC = () => {
       billingStreet: '',
       billingCity: '',
       billingPostalCode: '',
-      billingCountry: 'France',
+      billingCountry: 'Tunisie',
       shippingStreet: '',
       shippingCity: '',
       shippingPostalCode: '',
-      shippingCountry: 'France',
+      shippingCountry: 'Tunisie',
       paymentTerms: '',
       vatNumber: '',
     });
@@ -180,11 +178,11 @@ const CustomerList: React.FC = () => {
         billingStreet: customer.billingStreet || '',
         billingCity: customer.billingCity || '',
         billingPostalCode: customer.billingPostalCode || '',
-        billingCountry: customer.billingCountry || 'France',
+        billingCountry: customer.billingCountry || 'Tunisie',
         shippingStreet: customer.shippingStreet || '',
         shippingCity: customer.shippingCity || '',
         shippingPostalCode: customer.shippingPostalCode || '',
-        shippingCountry: customer.shippingCountry || 'France',
+        shippingCountry: customer.shippingCountry || 'Tunisie',
         paymentTerms: customer.paymentTerms || '',
         vatNumber: customer.vatNumber || '',
       });

@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, Index, OneToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, Index, OneToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Customer } from './Customer';
 import { Quote } from './Quote';
 
@@ -78,9 +78,9 @@ export class CustomerOrder {
   @Column({ type: 'timestamp', nullable: true, name: 'completed_at' })
   completedAt?: Date;
 
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP', name: 'created_at' })
+  @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP', name: 'updated_at' })
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt!: Date;
 }

@@ -48,16 +48,34 @@ const StockLevelsReport: React.FC = () => {
     try {
       setLoading(true);
       // Fetch inventory items
-      const inventoryResponse = await api.get<{ data: StockItem[] }>('/stock/inventory', {
+      const inventoryResponse = await api.get('/stock/inventory', {
         params: { perPage: 1000 }
       });
       
       // Fetch warehouses for filter
-      const warehousesResponse = await api.get<{ data: { id: string; name: string }[] }>('/stock/warehouses');
+      const warehousesResponse = await api.get('/stock/warehouses');
       
-      const items = inventoryResponse.data.data || [];
+      // Handle nested pagination format: { success: true, data: { data: [], pagination: {} } }
+      let items: StockItem[] = [];
+      if (Array.isArray(inventoryResponse.data)) {
+        items = inventoryResponse.data;
+      } else if (inventoryResponse.data?.data) {
+        items = Array.isArray(inventoryResponse.data.data) 
+          ? inventoryResponse.data.data 
+          : (inventoryResponse.data.data?.data || []);
+      }
+      
+      let warehouseList: { id: string; name: string }[] = [];
+      if (Array.isArray(warehousesResponse.data)) {
+        warehouseList = warehousesResponse.data;
+      } else if (warehousesResponse.data?.data) {
+        warehouseList = Array.isArray(warehousesResponse.data.data)
+          ? warehousesResponse.data.data
+          : (warehousesResponse.data.data?.data || []);
+      }
+        
       setStockData(items);
-      setWarehouses(warehousesResponse.data.data || []);
+      setWarehouses(warehouseList);
       
       // Calculate summary
       const lowStock = items.filter((item: StockItem) => item.quantity <= (item.reorder_point || 0));

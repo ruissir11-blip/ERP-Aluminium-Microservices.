@@ -144,7 +144,7 @@ const BIDashboard: React.FC = () => {
                       widget.title.toLowerCase().includes('margin');
     
     const formattedValue = isCurrency 
-      ? `€${(value as number / 1000).toFixed(1)}K`
+      ? `${(value as number / 1000).toFixed(1)}K DT`
       : isPercent 
         ? `${(value as number).toFixed(1)}%`
         : value;

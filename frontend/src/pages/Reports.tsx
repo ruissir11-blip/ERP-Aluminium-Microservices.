@@ -133,13 +133,7 @@ const Reports: React.FC = () => {
           title: 'Performance Commerciale', 
           description: 'Indicateurs de performance des commerciaux',
           icon: <LineChartOutlined style={{ fontSize: 24 }} />,
-          path: '/comptabilite/performance'
-        },
-        { 
-          title: 'Rentabilité Client', 
-          description: 'Analyse de rentabilité par client',
-          icon: <PieChartOutlined style={{ fontSize: 24 }} />,
-          path: '/comptabilite/customer-profitability'
+          path: '/comptabilite/financial-dashboard'
         }
       ]
     },
@@ -170,6 +164,12 @@ const Reports: React.FC = () => {
           description: 'Indicateurs clés de performance',
           icon: <LineChartOutlined style={{ fontSize: 24 }} />,
           path: '/comptabilite/kpi'
+        },
+        {
+          title: 'Calcul des Paies',
+          description: 'Calcul et génération des paies mensuelles',
+          icon: <DollarOutlined style={{ fontSize: 24 }} />,
+          path: '/comptabilite/payroll-calculation'
         }
       ]
     },

@@ -32,7 +32,7 @@ export class Customer {
   @Column({ type: 'varchar', length: 20, name: 'billing_postal_code' })
   billingPostalCode!: string;
 
-  @Column({ type: 'varchar', length: 100, default: 'France', name: 'billing_country' })
+  @Column({ type: 'varchar', length: 100, default: 'Tunisie', name: 'billing_country' })
   billingCountry!: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true, name: 'shipping_street' })

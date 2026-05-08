@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import maintenanceApi from '../services/maintenance/maintenanceApi';
-import { WorkOrder, MaintenancePlan, Machine } from '../types/maintenance.types';
+import { WorkOrder, Machine } from '../types/maintenance.types';
 
 export interface Notification {
   id: string;
@@ -94,25 +94,6 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
             timestamp: wo.scheduledDate || wo.createdAt,
             read: false,
             link: '/maintenance/work-orders',
-          });
-        });
-      } catch {
-        // Ignore
-      }
-
-      // Check for upcoming maintenance (due in 7 days)
-      try {
-        const duePlans = await maintenanceApi.maintenancePlan.getDue(7);
-        duePlans.data.data.forEach((plan: MaintenancePlan) => {
-          newNotifications.push({
-            id: `due-${plan.id}`,
-            type: 'maintenance_due',
-            title: 'Maintenance à venir',
-            message: `${plan.machine?.designation || 'Machine'} - ${plan.description} prévue dans les 7 jours`,
-            severity: 'info',
-            timestamp: plan.nextDueDate || new Date().toISOString(),
-            read: false,
-            link: '/maintenance/plans',
           });
         });
       } catch {
